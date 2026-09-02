@@ -33,7 +33,7 @@ import { pdfService } from '@/src/services/pdf.service';
 export default function InvoiceDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,40 +74,6 @@ export default function InvoiceDetailScreen() {
     }
   }, [id]);
 
-  const handleGenerateAndSharePdf = async (lang: 'en' | 'gu' = 'en') => {
-    if (!invoice) return;
-
-    try {
-      setGeneratingPdf(true);
-
-      const userProfile: DbProfile = (profile as DbProfile) || {
-        id: invoice.user_id,
-        name: 'Shop Owner',
-        email: null,
-        phone: null,
-        shop_name: 'Shayona Enterprise',
-        language: lang,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      const pdfResult = await pdfService.createInvoicePdf({
-        invoice,
-        profile: userProfile,
-        language: lang,
-      });
-
-      await pdfService.shareInvoicePdf(pdfResult.uri, invoice.invoice_number);
-    } catch (err) {
-      Alert.alert(
-        t.common.error,
-        (err as Error).message || 'Failed to generate or share PDF invoice.',
-      );
-    } finally {
-      setGeneratingPdf(false);
-    }
-  };
-
   const handleShareWhatsApp = async () => {
     if (!invoice) return;
 
@@ -120,7 +86,7 @@ export default function InvoiceDetailScreen() {
         email: null,
         phone: null,
         shop_name: 'Shayona Enterprise',
-        language: 'en',
+        language: language,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -128,7 +94,7 @@ export default function InvoiceDetailScreen() {
       const pdfResult = await pdfService.createInvoicePdf({
         invoice,
         profile: userProfile,
-        language: 'en',
+        language: language,
       });
       await pdfService.shareInvoiceViaWhatsApp(pdfResult.uri, invoice.invoice_number);
     } catch (err) {
@@ -138,7 +104,7 @@ export default function InvoiceDetailScreen() {
     }
   };
 
-  const handlePrintInvoice = async (lang: 'en' | 'gu' = 'en') => {
+  const handlePrintInvoice = async () => {
     if (!invoice) return;
 
     try {
@@ -150,7 +116,7 @@ export default function InvoiceDetailScreen() {
         email: null,
         phone: null,
         shop_name: 'Shayona Enterprise',
-        language: lang,
+        language: language,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -158,7 +124,7 @@ export default function InvoiceDetailScreen() {
       await pdfService.printInvoice({
         invoice,
         profile: userProfile,
-        language: lang,
+        language: language,
       });
     } catch (err) {
       Alert.alert(t.common.error, (err as Error).message || 'Failed to print invoice.');
@@ -382,53 +348,33 @@ export default function InvoiceDetailScreen() {
           )}
         </AppCard>
 
-        {/* Phase 9: PDF Delivery & Actions Card */}
+        {/* Phase 9 / 20C: Invoice Action Buttons: WhatsApp & Print Bill */}
         <AppCard style={styles.card}>
           <AppText variant="bodyLargeBold" style={{ marginBottom: spacing.sm }}>
             {t.invoices.invoiceActions}
           </AppText>
 
-          {/* Share Actions (English & Gujarati) */}
-          <View style={styles.pdfActionsRow}>
-            <AppButton
-              title="📄 Share PDF (English)"
-              variant="primary"
-              loading={generatingPdf}
-              onPress={() => handleGenerateAndSharePdf('en')}
-              style={{ flex: 1 }}
-            />
-
-            <AppButton
-              title="ગુજરાતી PDF"
-              variant="outline"
-              loading={generatingPdf}
-              onPress={() => handleGenerateAndSharePdf('gu')}
-              style={{ minWidth: 120 }}
-            />
-          </View>
-
-          {/* Direct Delivery Actions: WhatsApp & Print */}
-          <View style={styles.deliveryActionsRow}>
+          <View style={styles.actionButtonsRow}>
             <TouchableOpacity
               activeOpacity={0.7}
               disabled={generatingPdf || printing}
-              style={[styles.deliveryBtn, styles.whatsappBtn]}
+              style={[styles.actionBtn, styles.whatsappBtn]}
               onPress={handleShareWhatsApp}
             >
               <Ionicons name="logo-whatsapp" size={18} color="#FFFFFF" />
-              <AppText variant="captionBold" color="#FFFFFF">
-                WhatsApp
+              <AppText variant="bodyBold" color="#FFFFFF">
+                {generatingPdf ? t.common.loading : 'WhatsApp'}
               </AppText>
             </TouchableOpacity>
 
             <TouchableOpacity
               activeOpacity={0.7}
               disabled={generatingPdf || printing}
-              style={[styles.deliveryBtn, styles.printBtn]}
-              onPress={() => handlePrintInvoice('en')}
+              style={[styles.actionBtn, styles.printBtn]}
+              onPress={handlePrintInvoice}
             >
               <Ionicons name="print-outline" size={18} color={colors.textPrimary} />
-              <AppText variant="captionBold" color={colors.textPrimary}>
+              <AppText variant="bodyBold" color={colors.textPrimary}>
                 {printing ? t.common.loading : t.invoices.printBill}
               </AppText>
             </TouchableOpacity>
@@ -442,28 +388,16 @@ export default function InvoiceDetailScreen() {
           </AppText>
 
           <View style={styles.tableHeader}>
-            <AppText variant="caption" color={colors.textSecondary} style={{ flex: 2 }}>
+            <AppText variant="caption" color={colors.textSecondary} style={styles.colItemHeader}>
               {t.invoices.item.toUpperCase()}
             </AppText>
-            <AppText
-              variant="caption"
-              color={colors.textSecondary}
-              style={{ flex: 1, textAlign: 'center' }}
-            >
+            <AppText variant="caption" color={colors.textSecondary} style={styles.colQtyHeader}>
               QTY
             </AppText>
-            <AppText
-              variant="caption"
-              color={colors.textSecondary}
-              style={{ flex: 1, textAlign: 'right' }}
-            >
+            <AppText variant="caption" color={colors.textSecondary} style={styles.colRateHeader}>
               RATE
             </AppText>
-            <AppText
-              variant="caption"
-              color={colors.textSecondary}
-              style={{ flex: 1, textAlign: 'right' }}
-            >
+            <AppText variant="caption" color={colors.textSecondary} style={styles.colAmountHeader}>
               AMOUNT
             </AppText>
           </View>
@@ -479,16 +413,16 @@ export default function InvoiceDetailScreen() {
           ) : (
             invoice.items.map(item => (
               <View key={item.id} style={styles.tableRow}>
-                <AppText variant="body" style={{ flex: 2 }} numberOfLines={2}>
+                <AppText variant="body" style={styles.colItem} numberOfLines={2}>
                   {item.item_name}
                 </AppText>
-                <AppText variant="body" style={{ flex: 1, textAlign: 'center' }}>
+                <AppText variant="body" style={styles.colQty}>
                   {item.quantity}
                 </AppText>
-                <AppText variant="body" style={{ flex: 1, textAlign: 'right' }}>
+                <AppText variant="body" style={styles.colRate}>
                   {formatCurrency(Number(item.rate))}
                 </AppText>
-                <AppText variant="bodyBold" style={{ flex: 1, textAlign: 'right' }}>
+                <AppText variant="bodyBold" style={styles.colAmount}>
                   {formatCurrency(Number(item.amount))}
                 </AppText>
               </View>
@@ -499,19 +433,19 @@ export default function InvoiceDetailScreen() {
         {/* Calculation & Payment Breakdown Card */}
         <AppCard style={styles.card}>
           <View style={styles.calcRow}>
-            <AppText variant="body" color={colors.textSecondary}>
+            <AppText variant="body" color={colors.textSecondary} style={styles.calcLabel}>
               {t.invoices.totalAmount}
             </AppText>
-            <AppText variant="bodyLargeBold">
+            <AppText variant="bodyLargeBold" style={styles.calcValue}>
               {formatCurrency(Number(invoice.total_amount))}
             </AppText>
           </View>
 
           <View style={styles.calcRow}>
-            <AppText variant="body" color={colors.jama}>
+            <AppText variant="body" color={colors.jama} style={styles.calcLabel}>
               {t.invoices.paidAmount}
             </AppText>
-            <AppText variant="bodyBold" color={colors.jama}>
+            <AppText variant="bodyBold" color={colors.jama} style={styles.calcValue}>
               {formatCurrency(Number(invoice.paid_amount))}
             </AppText>
           </View>
@@ -519,10 +453,18 @@ export default function InvoiceDetailScreen() {
           <View style={styles.calcDivider} />
 
           <View style={styles.calcRow}>
-            <AppText variant="bodyLargeBold" color={hasBaki ? colors.baki : colors.textPrimary}>
+            <AppText
+              variant="bodyLargeBold"
+              color={hasBaki ? colors.baki : colors.textPrimary}
+              style={styles.calcLabel}
+            >
               {t.invoices.remainingDue}
             </AppText>
-            <AppText variant="h3" color={hasBaki ? colors.baki : colors.jama}>
+            <AppText
+              variant="h3"
+              color={hasBaki ? colors.baki : colors.jama}
+              style={styles.calcValue}
+            >
               {formatCurrency(Number(invoice.remaining_amount))}
             </AppText>
           </View>
@@ -795,22 +737,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
-  pdfActionsRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  deliveryActionsRow: {
+  actionButtonsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
   },
-  deliveryBtn: {
+  actionBtn: {
     flex: 1,
+    height: 46,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
     borderRadius: borderRadius.md,
   },
   whatsappBtn: {
@@ -823,6 +761,7 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
+    alignItems: 'center',
     paddingBottom: spacing.xs,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
@@ -835,11 +774,51 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: colors.borderLight,
   },
+  colItemHeader: {
+    flex: 2.2,
+  },
+  colQtyHeader: {
+    width: 44,
+    textAlign: 'center',
+  },
+  colRateHeader: {
+    flex: 1.3,
+    textAlign: 'right',
+  },
+  colAmountHeader: {
+    flex: 1.6,
+    textAlign: 'right',
+  },
+  colItem: {
+    flex: 2.2,
+    paddingRight: 4,
+  },
+  colQty: {
+    width: 44,
+    textAlign: 'center',
+  },
+  colRate: {
+    flex: 1.3,
+    textAlign: 'right',
+    paddingRight: 4,
+  },
+  colAmount: {
+    flex: 1.6,
+    textAlign: 'right',
+  },
   calcRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: 6,
+  },
+  calcLabel: {
+    flexShrink: 1,
+    marginRight: spacing.sm,
+  },
+  calcValue: {
+    flexShrink: 0,
+    textAlign: 'right',
   },
   calcDivider: {
     height: 1,
