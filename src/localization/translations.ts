@@ -91,6 +91,15 @@ export const translations = {
       deleteConfirmMessage:
         'Are you sure you want to delete this bill? This will remove the bill from ledger records.',
       delete: 'Delete',
+      addPayment: '+ Record Payment (Jama)',
+      recordPaymentTitle: 'Record Payment (Jama)',
+      paymentAmount: 'Payment Received (₹)',
+      payFullBaki: 'Pay Full Baki',
+      savePayment: 'Save Payment',
+      paymentSuccess: 'Payment recorded successfully!',
+      cannotExceedBaki: 'Payment cannot exceed remaining Baki amount.',
+      mustBeGreaterThanZero: 'Payment must be greater than zero.',
+      alreadyFullyPaid: 'This invoice is already fully paid.',
     },
 
     // Create / Edit Invoice
@@ -303,6 +312,15 @@ export const translations = {
       deleteConfirmMessage:
         'શું તમે ખરેખર આ બિલ કાઢી નાખવા માંગો છો? આ બિલ ખાતાવહીમાંથી દૂર થઈ જશે.',
       delete: 'કાઢી નાખો',
+      addPayment: '+ ચુકવણી ઉમેરો (જમા)',
+      recordPaymentTitle: 'ગ્રાહક ચુકવણી નોંધો',
+      paymentAmount: 'મળેલી રકમ (₹)',
+      payFullBaki: 'સંપૂર્ણ બાકી ચૂકવો',
+      savePayment: 'ચુકવણી સાચવો',
+      paymentSuccess: 'ચુકવણી સફળતાપૂર્વક સાચવવામાં આવી!',
+      cannotExceedBaki: 'ચુકવણી બાકી રકમ કરતાં વધુ ન હોઈ શકે.',
+      mustBeGreaterThanZero: 'ચુકવણી શૂન્ય કરતાં વધુ હોવી જોઈએ.',
+      alreadyFullyPaid: 'આ બિલ સંપૂર્ણપણે ચૂકવેલ છે.',
     },
 
     // Create / Edit Invoice

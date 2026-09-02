@@ -531,4 +531,113 @@ export const invoiceService = {
       };
     }
   },
+
+  /**
+   * Record payment (Jama) received from Customer or Buyer against an existing invoice (Phase 16)
+   * Enforces:
+   * 1. paymentRupees > 0
+   * 2. paymentPaise <= existing.remaining_amount
+   * 3. Accumulates to existing.paid_amount
+   * 4. Derives new remaining_amount = total_amount - new_paid_amount
+   * 5. Atomically saves to localStore and enqueues sync
+   */
+  async recordPayment(
+    invoiceId: string,
+    paymentRupees: number,
+  ): Promise<InvoiceOperationResult<InvoiceDetail>> {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        return { data: null, error: 'User not authenticated.' };
+      }
+
+      if (typeof paymentRupees !== 'number' || isNaN(paymentRupees) || paymentRupees <= 0) {
+        return { data: null, error: 'Payment amount must be greater than zero.' };
+      }
+
+      const userId = userData.user.id;
+      let existing = await localStore.getInvoiceById(userId, invoiceId);
+
+      // If not in localStore and online, pull from server
+      if (!existing && networkService.isOnline()) {
+        const { data: serverInv } = await (supabase.from('invoices') as any)
+          .select('*')
+          .eq('id', invoiceId)
+          .eq('user_id', userId)
+          .single();
+
+        if (serverInv) {
+          const localInv: LocalInvoice = {
+            ...serverInv,
+            sync_status: 'SYNCED',
+            local_updated_at: serverInv.updated_at,
+          };
+          await localStore.upsertInvoice(userId, localInv);
+          existing = localInv;
+        }
+      }
+
+      if (!existing) {
+        return { data: null, error: 'Invoice not found.' };
+      }
+
+      const currentRemaining = Number(existing.remaining_amount || 0);
+      if (currentRemaining <= 0) {
+        return { data: null, error: 'This invoice is already fully paid.' };
+      }
+
+      const paymentPaise = rupeesToPaise(paymentRupees);
+      if (paymentPaise > currentRemaining) {
+        return { data: null, error: 'Payment amount cannot exceed remaining Baki.' };
+      }
+
+      const currentPaid = Number(existing.paid_amount || 0);
+      const newPaidPaise = currentPaid + paymentPaise;
+      const newRemainingPaise = Math.max(0, Number(existing.total_amount) - newPaidPaise);
+      const now = new Date().toISOString();
+
+      const updatedInvoice: LocalInvoice = {
+        ...existing,
+        paid_amount: newPaidPaise,
+        remaining_amount: newRemainingPaise,
+        updated_at: now,
+        sync_status: 'PENDING_UPDATE',
+        local_updated_at: now,
+      };
+
+      // 1. Atomic local database update
+      await localStore.upsertInvoice(userId, updatedInvoice);
+
+      // 2. Enqueue mutation
+      await localStore.enqueueSyncItem(userId, {
+        id: Crypto.randomUUID(),
+        user_id: userId,
+        entity: 'INVOICE',
+        entity_id: invoiceId,
+        operation: 'UPDATE',
+        payload: {
+          invoice_number: updatedInvoice.invoice_number,
+          party_type: updatedInvoice.party_type,
+          party_id: updatedInvoice.party_id,
+          invoice_date: updatedInvoice.invoice_date,
+          total_amount: updatedInvoice.total_amount,
+          paid_amount: updatedInvoice.paid_amount,
+          remaining_amount: updatedInvoice.remaining_amount,
+          notes: updatedInvoice.notes,
+        },
+        created_at: now,
+        retry_count: 0,
+      });
+
+      // 3. Trigger sync if online
+      if (networkService.isOnline()) {
+        syncService.processQueue(userId).catch(() => {});
+      }
+
+      const detail = await this.getInvoiceById(invoiceId);
+      return { data: detail };
+    } catch (err) {
+      return { data: null, error: (err as Error).message || 'Failed to record payment.' };
+    }
+  },
 };

@@ -6,10 +6,18 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Modal,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { AppScreenContainer, AppText, AppCard, AppBadge, AppButton } from '@/src/components/common';
+import {
+  AppScreenContainer,
+  AppText,
+  AppCard,
+  AppBadge,
+  AppButton,
+  AppTextInput,
+} from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
 import { borderRadius } from '@/src/theme/borderRadius';
@@ -18,8 +26,8 @@ import { useAuthStore } from '@/src/store/authStore';
 import { useLanguage } from '@/src/localization';
 import { InvoiceDetail } from '@/src/types/invoice';
 import { DbInvoice, DbInvoiceItem, DbCustomer, DbBuyer, DbProfile } from '@/src/types/database';
-import { formatCurrency } from '@/src/utils';
-import { useDeleteInvoice } from '@/src/features/invoices';
+import { formatCurrency, paiseToRupees } from '@/src/utils';
+import { useDeleteInvoice, useRecordPayment } from '@/src/features/invoices';
 import { pdfService } from '@/src/services/pdf.service';
 
 export default function InvoiceDetailScreen() {
@@ -33,8 +41,15 @@ export default function InvoiceDetailScreen() {
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [printing, setPrinting] = useState(false);
 
+  // Phase 16: Payment Update State
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [paymentAmountInput, setPaymentAmountInput] = useState('');
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [submittingPayment, setSubmittingPayment] = useState(false);
+
   const profile = useAuthStore(state => state.profile);
   const deleteInvoiceMutation = useDeleteInvoice();
+  const recordPaymentMutation = useRecordPayment();
 
   useEffect(() => {
     async function loadInvoice() {
@@ -117,26 +132,18 @@ export default function InvoiceDetailScreen() {
         updated_at: new Date().toISOString(),
       };
 
-      let pdfResult: { uri: string };
-      try {
-        pdfResult = await pdfService.createInvoicePdf({
-          invoice,
-          profile: userProfile,
-          language: lang,
-        });
-      } catch (genErr) {
-        Alert.alert(t.common.error, (genErr as Error).message || 'Unable to generate invoice PDF.');
-        return;
-      }
+      const pdfResult = await pdfService.createInvoicePdf({
+        invoice,
+        profile: userProfile,
+        language: lang,
+      });
 
-      try {
-        await pdfService.shareInvoicePdf(pdfResult.uri, invoice.invoice_number);
-      } catch (shareErr) {
-        Alert.alert(
-          t.common.error,
-          (shareErr as Error).message || 'Unable to open system share menu.',
-        );
-      }
+      await pdfService.shareInvoicePdf(pdfResult.uri, invoice.invoice_number);
+    } catch (err) {
+      Alert.alert(
+        t.common.error,
+        (err as Error).message || 'Failed to generate or share PDF invoice.',
+      );
     } finally {
       setGeneratingPdf(false);
     }
@@ -159,42 +166,14 @@ export default function InvoiceDetailScreen() {
         updated_at: new Date().toISOString(),
       };
 
-      let pdfResult: { uri: string };
-      try {
-        pdfResult = await pdfService.createInvoicePdf({
-          invoice,
-          profile: userProfile,
-          language: 'en',
-        });
-      } catch (genErr) {
-        Alert.alert(t.common.error, (genErr as Error).message || 'Unable to generate invoice PDF.');
-        return;
-      }
-
-      const isInstalled = await pdfService.isWhatsAppInstalled();
-      if (!isInstalled) {
-        Alert.alert(
-          'WhatsApp Not Available',
-          'WhatsApp is not installed on this device. Would you like to use the device share menu instead?',
-          [
-            { text: t.common.cancel, style: 'cancel' },
-            {
-              text: 'Share PDF',
-              onPress: () => pdfService.shareInvoicePdf(pdfResult.uri, invoice.invoice_number),
-            },
-          ],
-        );
-        return;
-      }
-
-      try {
-        await pdfService.shareInvoiceViaWhatsApp(pdfResult.uri, invoice.invoice_number);
-      } catch (shareErr) {
-        Alert.alert(
-          t.common.error,
-          (shareErr as Error).message || 'Unable to share via WhatsApp. Please try standard share.',
-        );
-      }
+      const pdfResult = await pdfService.createInvoicePdf({
+        invoice,
+        profile: userProfile,
+        language: 'en',
+      });
+      await pdfService.shareInvoiceViaWhatsApp(pdfResult.uri, invoice.invoice_number);
+    } catch (err) {
+      Alert.alert(t.common.error, (err as Error).message || 'Failed to share invoice on WhatsApp.');
     } finally {
       setGeneratingPdf(false);
     }
@@ -222,12 +201,8 @@ export default function InvoiceDetailScreen() {
         profile: userProfile,
         language: lang,
       });
-    } catch (printErr) {
-      Alert.alert(
-        t.common.error,
-        (printErr as Error).message ||
-          'Unable to start printing. Please check your printer settings.',
-      );
+    } catch (err) {
+      Alert.alert(t.common.error, (err as Error).message || 'Failed to print invoice.');
     } finally {
       setPrinting(false);
     }
@@ -251,6 +226,55 @@ export default function InvoiceDetailScreen() {
         },
       },
     ]);
+  };
+
+  // Phase 16: Handle Save Payment
+  const handleSavePayment = async () => {
+    if (!invoice) return;
+
+    const trimmed = paymentAmountInput.trim();
+    const paymentNum = parseFloat(trimmed);
+
+    if (!trimmed || isNaN(paymentNum) || paymentNum <= 0) {
+      setPaymentError(t.invoices.mustBeGreaterThanZero || 'Payment must be greater than zero.');
+      return;
+    }
+
+    const currentBakiRupees = paiseToRupees(Number(invoice.remaining_amount));
+    if (paymentNum > currentBakiRupees) {
+      setPaymentError(
+        t.invoices.cannotExceedBaki || 'Payment cannot exceed remaining Baki amount.',
+      );
+      return;
+    }
+
+    try {
+      setSubmittingPayment(true);
+      setPaymentError(null);
+
+      const res = await recordPaymentMutation.mutateAsync({
+        invoiceId: invoice.id,
+        paymentRupees: paymentNum,
+      });
+
+      if (res.error || !res.data) {
+        setPaymentError(res.error || 'Failed to record payment.');
+        return;
+      }
+
+      setInvoice(res.data);
+      setIsPaymentModalOpen(false);
+      setPaymentAmountInput('');
+
+      Alert.alert(
+        t.common.success || 'Success',
+        t.invoices.paymentSuccess || 'Payment recorded successfully!',
+      );
+    } catch (err) {
+      setPaymentError((err as Error).message || 'Failed to record payment.');
+    } finally {
+      setSubmittingPayment(false);
+    }
   };
 
   if (loading) {
@@ -509,7 +533,7 @@ export default function InvoiceDetailScreen() {
           )}
         </AppCard>
 
-        {/* Calculation & Payment Breakdown */}
+        {/* Calculation & Payment Breakdown Card */}
         <AppCard style={styles.card}>
           <View style={styles.calcRow}>
             <AppText variant="body" color={colors.textSecondary}>
@@ -539,8 +563,138 @@ export default function InvoiceDetailScreen() {
               {formatCurrency(Number(invoice.remaining_amount))}
             </AppText>
           </View>
+
+          {/* Phase 16: Payment Update Action Button */}
+          {hasBaki ? (
+            <AppButton
+              title={t.invoices.addPayment || '+ Record Payment (Jama)'}
+              variant="primary"
+              onPress={() => {
+                setPaymentAmountInput('');
+                setPaymentError(null);
+                setIsPaymentModalOpen(true);
+              }}
+              style={{ marginTop: spacing.md }}
+            />
+          ) : (
+            <View style={styles.fullyPaidBadgeContainer}>
+              <Ionicons name="checkmark-circle" size={18} color={colors.jama} />
+              <AppText variant="captionBold" color={colors.jama} style={{ marginLeft: 6 }}>
+                {t.invoices.alreadyFullyPaid || 'This invoice is already fully paid.'}
+              </AppText>
+            </View>
+          )}
         </AppCard>
       </ScrollView>
+
+      {/* Phase 16: Record Payment Modal */}
+      <Modal
+        visible={isPaymentModalOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => {
+          if (!submittingPayment) setIsPaymentModalOpen(false);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <AppText variant="h3">
+                {t.invoices.recordPaymentTitle || 'Record Payment (Jama)'}
+              </AppText>
+              <TouchableOpacity
+                disabled={submittingPayment}
+                onPress={() => setIsPaymentModalOpen(false)}
+              >
+                <Ionicons name="close" size={24} color={colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Financial Summary Strip */}
+            <View style={styles.paymentSummaryCard}>
+              <View style={styles.summaryItem}>
+                <AppText variant="caption" color={colors.textSecondary}>
+                  {t.invoices.totalAmount}
+                </AppText>
+                <AppText variant="bodyBold">{formatCurrency(Number(invoice.total_amount))}</AppText>
+              </View>
+
+              <View style={styles.summaryDivider} />
+
+              <View style={styles.summaryItem}>
+                <AppText variant="caption" color={colors.jama}>
+                  {t.dashboard.jamaReceived || 'Jama'}
+                </AppText>
+                <AppText variant="bodyBold" color={colors.jama}>
+                  {formatCurrency(Number(invoice.paid_amount))}
+                </AppText>
+              </View>
+
+              <View style={styles.summaryDivider} />
+
+              <View style={styles.summaryItem}>
+                <AppText variant="caption" color={colors.baki}>
+                  {t.dashboard.bakiPending || 'Baki'}
+                </AppText>
+                <AppText variant="bodyBold" color={colors.baki}>
+                  {formatCurrency(Number(invoice.remaining_amount))}
+                </AppText>
+              </View>
+            </View>
+
+            {/* Payment Input */}
+            <AppTextInput
+              label={t.invoices.paymentAmount || 'Payment Received (₹) *'}
+              placeholder="e.g. 10000"
+              value={paymentAmountInput}
+              onChangeText={text => {
+                setPaymentAmountInput(text);
+                if (paymentError) setPaymentError(null);
+              }}
+              keyboardType="decimal-pad"
+              error={paymentError || undefined}
+              autoFocus
+            />
+
+            {/* Quick Fill Button: Pay Full Baki */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              disabled={submittingPayment}
+              style={styles.quickFillBtn}
+              onPress={() => {
+                setPaymentAmountInput(paiseToRupees(Number(invoice.remaining_amount)).toString());
+                setPaymentError(null);
+              }}
+            >
+              <Ionicons name="sparkles-outline" size={14} color={colors.accent} />
+              <AppText variant="captionBold" color={colors.accent} style={{ marginLeft: 4 }}>
+                {t.invoices.payFullBaki || 'Pay Full Baki'} (
+                {formatCurrency(Number(invoice.remaining_amount))})
+              </AppText>
+            </TouchableOpacity>
+
+            {/* Modal Actions */}
+            <View style={styles.modalActionsRow}>
+              <AppButton
+                title={t.common.cancel}
+                variant="outline"
+                style={{ flex: 1 }}
+                disabled={submittingPayment}
+                onPress={() => setIsPaymentModalOpen(false)}
+              />
+              <AppButton
+                title={t.invoices.savePayment || 'Save Payment'}
+                variant="primary"
+                style={{ flex: 1 }}
+                loading={submittingPayment}
+                disabled={submittingPayment}
+                onPress={handleSavePayment}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </AppScreenContainer>
   );
 }
@@ -635,5 +789,68 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
     marginVertical: spacing.xs,
+  },
+  fullyPaidBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.jamaBackground,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    padding: spacing.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  paymentSummaryCard: {
+    flexDirection: 'row',
+    backgroundColor: colors.surfaceSubtle,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  summaryItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  summaryDivider: {
+    width: 1,
+    backgroundColor: colors.border,
+    marginVertical: 2,
+  },
+  quickFillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: colors.accentSubtle,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: borderRadius.round,
+    marginBottom: spacing.md,
+  },
+  modalActionsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
   },
 });

@@ -80,3 +80,19 @@ export function useDeleteInvoice() {
     },
   });
 }
+
+export function useRecordPayment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ invoiceId, paymentRupees }: { invoiceId: string; paymentRupees: number }) =>
+      invoiceService.recordPayment(invoiceId, paymentRupees),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: INVOICES_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice', variables.invoiceId] });
+      queryClient.invalidateQueries({ queryKey: CUSTOMERS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: BUYERS_QUERY_KEY });
+    },
+  });
+}
