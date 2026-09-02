@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   AppScreenContainer,
@@ -21,12 +22,17 @@ import { syncService } from '@/src/services/sync.service';
 import { backupService } from '@/src/services/backup.service';
 import { useNetworkStore } from '@/src/services/network.service';
 import { localStore } from '@/src/database/localStore';
+import { useUpdateStore } from '@/src/services/update.service';
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const { user, profile, signOut, isLoading } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const queryClient = useQueryClient();
   const isOnline = useNetworkStore(state => state.isOnline);
+  const isUpdateAvailable = useUpdateStore(state => state.isUpdateAvailable);
+  const appVersion = useUpdateStore(state => state.appVersion);
+  const checkForUpdate = useUpdateStore(state => state.checkForUpdate);
   const [loggingOut, setLoggingOut] = useState(false);
   const [savingLang, setSavingLang] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -48,7 +54,8 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     fetchPendingCount();
-  }, [fetchPendingCount]);
+    checkForUpdate(false);
+  }, [fetchPendingCount, checkForUpdate]);
 
   const handleLanguageChange = async (newLang: SupportedLanguage) => {
     if (newLang === language) return;
@@ -321,6 +328,44 @@ export default function SettingsScreen() {
         </View>
       </AppCard>
 
+      {/* Phase 22: App Updates Card with Red Dot Indicator */}
+      <AppCard>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={styles.updateCardRow}
+          onPress={() => router.push('/app-updates')}
+          accessibilityRole="button"
+          accessibilityLabel={t.updates.title}
+        >
+          <View style={styles.updateLeft}>
+            <View style={styles.updateIconBox}>
+              <Ionicons name="sparkles" size={20} color={colors.primary} />
+            </View>
+            <View style={{ marginLeft: spacing.sm, flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <AppText variant="bodyLargeBold">{t.updates.title}</AppText>
+                {isUpdateAvailable && <View style={styles.redDot} />}
+              </View>
+              <AppText
+                variant="caption"
+                color={isUpdateAvailable ? colors.danger : colors.textSecondary}
+              >
+                {isUpdateAvailable ? t.updates.newUpdateAvailable : t.updates.latestVersionMessage}
+              </AppText>
+            </View>
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            {isUpdateAvailable ? (
+              <AppBadge label="Update" variant="danger" />
+            ) : (
+              <AppBadge label={`v${appVersion}`} variant="neutral" />
+            )}
+            <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+          </View>
+        </TouchableOpacity>
+      </AppCard>
+
       {/* Account & Security Card */}
       <AppCard>
         <AppText variant="h4" style={styles.cardSectionTitle}>
@@ -499,6 +544,35 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     marginLeft: spacing.sm,
+  },
+  updateCardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  updateLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  updateIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surfaceSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  redDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.danger,
+    marginLeft: 6,
   },
   modalOverlay: {
     flex: 1,

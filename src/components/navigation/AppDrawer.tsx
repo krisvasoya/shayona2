@@ -20,6 +20,7 @@ import { useAuth } from '@/src/features/auth';
 import { useLanguage } from '@/src/localization';
 import { formatPhoneDisplay } from '@/src/utils/phone';
 import { useDrawer } from './DrawerContext';
+import { useUpdateStore } from '@/src/services/update.service';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.82, 320);
@@ -29,6 +30,7 @@ export const AppDrawer: React.FC = () => {
   const { user, profile, signOut } = useAuth();
   const { isOpen, closeDrawer } = useDrawer();
   const { t } = useLanguage();
+  const isUpdateAvailable = useUpdateStore(state => state.isUpdateAvailable);
 
   const animX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const animOpacity = useRef(new Animated.Value(0)).current;
@@ -217,7 +219,10 @@ export const AppDrawer: React.FC = () => {
                 color={colors.textPrimary}
                 style={styles.menuIcon}
               />
-              <AppText variant="bodyMedium">{t.nav.settings}</AppText>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <AppText variant="bodyMedium">{t.nav.settings}</AppText>
+                {isUpdateAvailable && <View style={styles.redDot} />}
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -344,5 +349,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.xs,
+  },
+  redDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.danger,
+    marginLeft: 6,
   },
 });

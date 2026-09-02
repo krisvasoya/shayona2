@@ -223,6 +223,31 @@ export const translations = {
       confirmLogoutMessage: 'Are you sure you want to logout from your account?',
     },
 
+    // App Updates Center
+    updates: {
+      title: 'App Updates',
+      subtitle: 'System & Feature Updates',
+      currentVersion: 'Current Version',
+      status: 'Status',
+      latestVersionMessage: "You're using the latest version",
+      newUpdateAvailable: 'New update available',
+      newUpdateDesc:
+        'A new version of the app is available with performance improvements and fixes.',
+      checkForUpdates: 'Check for Updates',
+      checking: 'Checking for updates...',
+      updateNow: 'Update Now',
+      downloading: 'Downloading update...',
+      updateReady: 'Update ready',
+      restartAndUpdate: 'Restart & Update',
+      unableToCheckUpdates: 'Unable to check for updates. Please check your internet connection.',
+      upToDateToast: "You're already using the latest version.",
+      channel: 'Channel',
+      runtimeVersion: 'Runtime Version',
+      updateId: 'Update ID',
+      diagnosticInfo: 'Diagnostic Info',
+      devModeNotice: 'OTA updates are managed through EAS in standalone builds.',
+    },
+
     // Common Alerts & Messages
     common: {
       cancel: 'Cancel',
@@ -462,6 +487,30 @@ export const translations = {
       loggingOut: 'લોગઆઉટ ચાલુ છે...',
       confirmLogoutTitle: 'લોગઆઉટ પુષ્ટિ',
       confirmLogoutMessage: 'શું તમે ખરેખર એકાઉન્ટમાંથી લોગઆઉટ કરવા માંગો છો?',
+    },
+
+    // App Updates Center
+    updates: {
+      title: 'એપ અપડેટ્સ (App Updates)',
+      subtitle: 'સિસ્ટમ અને નવી સુવિધાઓ',
+      currentVersion: 'વર્તમાન વર્ઝન',
+      status: 'સ્થિતિ',
+      latestVersionMessage: 'તમે નવીનતમ વર્ઝનનો ઉપયોગ કરી રહ્યા છો',
+      newUpdateAvailable: 'નવું અપડેટ ઉપલબ્ધ છે',
+      newUpdateDesc: 'સુધારાઓ અને નવી સુવિધાઓ સાથે નવું વર્ઝન ઉપલબ્ધ છે.',
+      checkForUpdates: 'અપડેટ માટે તપાસો',
+      checking: 'અપડેટ તપાસી રહ્યું છે...',
+      updateNow: 'હમણાં અપડેટ કરો',
+      downloading: 'અપડેટ ડાઉનલોડ થઈ રહ્યું છે...',
+      updateReady: 'અપડેટ તૈયાર છે',
+      restartAndUpdate: 'રીસ્ટાર્ટ અને અપડેટ કરો',
+      unableToCheckUpdates: 'અપડેટ તપાસી શકાયું નથી. કૃપા કરીને તમારું ઇન્ટરનેટ કનેક્શન તપાસો.',
+      upToDateToast: 'તમે પહેલેથી જ નવીનતમ વર્ઝન પર છો.',
+      channel: 'ચેનલ',
+      runtimeVersion: 'રનટાઇમ વર્ઝન',
+      updateId: 'અપડેટ ID',
+      diagnosticInfo: 'ડાયગ્નોસ્ટિક માહિતી',
+      devModeNotice: 'OTA અપડેટ્સ EAS દ્વારા સ્ટેન્ડઅલોન બિલ્ડમાં સંચાલિત થાય છે.',
     },
 
     // Common Alerts & Messages

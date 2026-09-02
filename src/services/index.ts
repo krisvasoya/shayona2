@@ -5,3 +5,5 @@ export * from './invoice.service';
 export * from './pdf.service';
 export * from './sync.service';
 export * from './network.service';
+export * from './backup.service';
+export * from './update.service';
