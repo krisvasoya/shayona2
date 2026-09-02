@@ -2,7 +2,12 @@ import { makeRedirectUri } from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from './supabase/client';
 import { authStorage } from './supabase/storage';
-import { normalizePhoneE164 } from '@/src/utils/phone';
+import {
+  normalizePhoneE164,
+  phoneToSyntheticEmail,
+  isSyntheticPhoneEmail,
+  syntheticEmailToPhone,
+} from '@/src/utils/phone';
 import { mapAuthError } from '@/src/features/auth/errors';
 import { User, Session } from '@supabase/supabase-js';
 
@@ -27,17 +32,20 @@ export interface AuthResult {
 export const authService = {
   /**
    * Register a new user with Shop Name, Mobile Number and Password
+   * (Zero-cost native Supabase Auth engine)
    */
   async signUpWithPhone(shopName: string, rawPhone: string, password: string): Promise<AuthResult> {
     try {
+      const syntheticEmail = phoneToSyntheticEmail(rawPhone);
       const normalizedPhone = normalizePhoneE164(rawPhone);
 
       const { data, error } = await supabase.auth.signUp({
-        phone: normalizedPhone,
+        email: syntheticEmail,
         password,
         options: {
           data: {
             shop_name: shopName.trim(),
+            phone: normalizedPhone,
           },
         },
       });
@@ -101,13 +109,13 @@ export const authService = {
     rememberMe = true,
   ): Promise<AuthResult> {
     try {
-      const normalizedPhone = normalizePhoneE164(rawPhone);
+      const syntheticEmail = phoneToSyntheticEmail(rawPhone);
 
       // Save Remember Me preference
       await authStorage.setRememberMe(rememberMe);
 
       const { data, error } = await supabase.auth.signInWithPassword({
-        phone: normalizedPhone,
+        email: syntheticEmail,
         password,
       });
 
@@ -240,18 +248,13 @@ export const authService = {
   },
 
   /**
-   * Request OTP for password recovery
+   * Request password recovery for mobile number
    */
   async requestPasswordResetOtp(rawPhone: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const normalizedPhone = normalizePhoneE164(rawPhone);
+      const syntheticEmail = phoneToSyntheticEmail(rawPhone);
 
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: normalizedPhone,
-        options: {
-          shouldCreateUser: false,
-        },
-      });
+      const { error } = await supabase.auth.resetPasswordForEmail(syntheticEmail);
 
       if (error) {
         return { success: false, error: mapAuthError(error) };
@@ -264,7 +267,7 @@ export const authService = {
   },
 
   /**
-   * Verify OTP and update password
+   * Verify OTP / Recovery token and update password
    */
   async verifyOtpAndResetPassword(
     rawPhone: string,
@@ -272,13 +275,13 @@ export const authService = {
     newPassword: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const normalizedPhone = normalizePhoneE164(rawPhone);
+      const syntheticEmail = phoneToSyntheticEmail(rawPhone);
 
-      // Verify OTP
+      // Verify recovery token
       const { error: verifyError } = await supabase.auth.verifyOtp({
-        phone: normalizedPhone,
+        email: syntheticEmail,
         token: otp.trim(),
-        type: 'sms',
+        type: 'recovery',
       });
 
       if (verifyError) {
@@ -320,10 +323,16 @@ export const authService = {
       (userFallback?.user_metadata?.full_name as string) ||
       'Shayona Enterprise';
 
+    let displayPhone =
+      userFallback?.phone || (userFallback?.user_metadata?.phone as string) || null;
+    if (!displayPhone && isSyntheticPhoneEmail(userFallback?.email)) {
+      displayPhone = `+91${syntheticEmailToPhone(userFallback?.email || '')}`;
+    }
+
     return {
       id: userId,
       shop_name: shopName,
-      phone: userFallback?.phone || null,
+      phone: displayPhone,
       language: 'en',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

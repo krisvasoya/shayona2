@@ -3,6 +3,10 @@ import {
   normalizePhoneE164,
   extract10DigitPhone,
   formatPhoneDisplay,
+  phoneToSyntheticEmail,
+  isSyntheticPhoneEmail,
+  syntheticEmailToPhone,
+  PHONE_AUTH_DOMAIN,
 } from '../phone';
 
 describe('Phone Number Utilities', () => {
@@ -62,6 +66,24 @@ describe('Phone Number Utilities', () => {
     it('should format into readable Indian mobile display', () => {
       expect(formatPhoneDisplay('+919876543210')).toBe('+91 98765 43210');
       expect(formatPhoneDisplay('9876543210')).toBe('+91 98765 43210');
+    });
+  });
+
+  describe('Zero-Cost Synthetic Phone Auth Mapping', () => {
+    it('should map 10-digit phone to synthetic email', () => {
+      expect(phoneToSyntheticEmail('9876543210')).toBe(`9876543210@${PHONE_AUTH_DOMAIN}`);
+      expect(phoneToSyntheticEmail('+91 98765 43210')).toBe(`9876543210@${PHONE_AUTH_DOMAIN}`);
+    });
+
+    it('should recognize synthetic phone emails', () => {
+      expect(isSyntheticPhoneEmail(`9876543210@${PHONE_AUTH_DOMAIN}`)).toBe(true);
+      expect(isSyntheticPhoneEmail('user@gmail.com')).toBe(false);
+      expect(isSyntheticPhoneEmail(null)).toBe(false);
+    });
+
+    it('should extract phone number from synthetic email', () => {
+      expect(syntheticEmailToPhone(`9876543210@${PHONE_AUTH_DOMAIN}`)).toBe('9876543210');
+      expect(syntheticEmailToPhone('user@gmail.com')).toBe('user@gmail.com');
     });
   });
 });
