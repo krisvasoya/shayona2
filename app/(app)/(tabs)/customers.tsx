@@ -8,6 +8,8 @@ import {
   Modal,
   ScrollView,
   ActivityIndicator,
+  Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -278,7 +280,10 @@ export default function CustomersScreen() {
         transparent
         onRequestClose={() => setIsAddModalOpen(false)}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalOverlay}
+        >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <AppText variant="h3">{t.customers.createCustomerTitle}</AppText>
@@ -292,7 +297,11 @@ export default function CustomersScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            >
               <AppTextInput
                 label={`${t.customers.customerName} *`}
                 placeholder="e.g. Ramesh Patel"
@@ -342,7 +351,7 @@ export default function CustomersScreen() {
               </View>
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </AppScreenContainer>
   );

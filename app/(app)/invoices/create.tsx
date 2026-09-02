@@ -236,7 +236,7 @@ export default function CreateInvoiceScreen() {
   }
 
   return (
-    <AppScreenContainer edges={['top', 'bottom']}>
+    <AppScreenContainer edges={['top', 'bottom']} disableDefaultPadding={true}>
       {/* Top Header */}
       <View style={styles.navHeader}>
         <TouchableOpacity
@@ -254,7 +254,12 @@ export default function CreateInvoiceScreen() {
         <View style={{ width: 26 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
         {/* Section 1: Bill Header & Party */}
         <AppCard style={styles.card}>
           <AppText variant="bodyLargeBold" style={styles.sectionHeader}>
@@ -579,7 +584,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   scrollContent: {
-    paddingBottom: spacing.xxl,
+    paddingHorizontal: spacing.screenPadding,
+    paddingBottom: 160,
   },
   card: {
     marginBottom: spacing.md,

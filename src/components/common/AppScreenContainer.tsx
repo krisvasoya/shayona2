@@ -7,6 +7,7 @@ import {
   ViewStyle,
   StatusBar,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView, NativeSafeAreaViewProps } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +25,7 @@ export interface AppScreenContainerProps {
   contentContainerStyle?: StyleProp<ViewStyle>;
   backgroundColor?: string;
   edges?: NativeSafeAreaViewProps['edges'];
+  disableDefaultPadding?: boolean;
 }
 
 export const AppScreenContainer: React.FC<AppScreenContainerProps> = ({
@@ -34,6 +36,7 @@ export const AppScreenContainer: React.FC<AppScreenContainerProps> = ({
   contentContainerStyle,
   backgroundColor = colors.background,
   edges = ['top'],
+  disableDefaultPadding = false,
 }) => {
   const isOnline = useNetworkStore(state => state.isOnline);
   const { t } = useLanguage();
@@ -53,24 +56,42 @@ export const AppScreenContainer: React.FC<AppScreenContainerProps> = ({
         </View>
       )}
       {header}
-      {scrollable ? (
-        <ScrollView
-          style={[styles.container, style]}
-          contentContainerStyle={[styles.scrollContent, contentContainerStyle]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {children}
-        </ScrollView>
-      ) : (
-        <View style={[styles.container, styles.nonScrollContent, style]}>{children}</View>
-      )}
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        {scrollable ? (
+          <ScrollView
+            style={[styles.container, style]}
+            contentContainerStyle={[
+              styles.scrollContent,
+              disableDefaultPadding && styles.noPadding,
+              contentContainerStyle,
+            ]}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            showsVerticalScrollIndicator={false}
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+          >
+            {children}
+          </ScrollView>
+        ) : (
+          <View
+            style={[styles.container, !disableDefaultPadding && styles.nonScrollContent, style]}
+          >
+            {children}
+          </View>
+        )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   safeArea: {
+    flex: 1,
+  },
+  keyboardView: {
     flex: 1,
   },
   offlineBanner: {
@@ -96,6 +117,10 @@ const styles = StyleSheet.create({
     padding: spacing.screenPadding,
     paddingBottom: 100, // Safe clearance for bottom tab bar
     flexGrow: 1,
+  },
+  noPadding: {
+    padding: 0,
+    paddingBottom: 0,
   },
   nonScrollContent: {
     padding: spacing.screenPadding,

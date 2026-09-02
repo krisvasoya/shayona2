@@ -21,12 +21,12 @@ import {
 import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
 import { borderRadius } from '@/src/theme/borderRadius';
-import { supabase } from '@/src/services/supabase/client';
 import { useAuthStore } from '@/src/store/authStore';
 import { useLanguage } from '@/src/localization';
 import { InvoiceDetail } from '@/src/types/invoice';
-import { DbInvoice, DbInvoiceItem, DbCustomer, DbBuyer, DbProfile } from '@/src/types/database';
+import { DbProfile } from '@/src/types/database';
 import { formatCurrency, paiseToRupees } from '@/src/utils';
+import { invoiceService } from '@/src/services/invoice.service';
 import { useDeleteInvoice, useRecordPayment, useInvoicePayments } from '@/src/features/invoices';
 import { pdfService } from '@/src/services/pdf.service';
 
@@ -60,52 +60,8 @@ export default function InvoiceDetailScreen() {
         setLoading(true);
         setError(null);
 
-        // Fetch invoice
-        const { data: inv, error: invErr } = await (supabase.from('invoices') as any)
-          .select('*')
-          .eq('id', id as string)
-          .single();
-
-        if (invErr || !inv) {
-          setError(invErr?.message || 'Invoice not found.');
-          setLoading(false);
-          return;
-        }
-
-        const typedInv = inv as DbInvoice;
-
-        // Fetch invoice line items
-        const { data: items } = await (supabase.from('invoice_items') as any)
-          .select('*')
-          .eq('invoice_id', typedInv.id)
-          .order('created_at', { ascending: true });
-
-        // Fetch customer or buyer
-        let partyName = 'Direct Party';
-        if (typedInv.party_type === 'CUSTOMER' && typedInv.party_id) {
-          const { data: cust } = await (supabase.from('customers') as any)
-            .select('*')
-            .eq('id', typedInv.party_id)
-            .single();
-          if (cust) {
-            partyName = (cust as DbCustomer).name;
-          }
-        } else if (typedInv.party_type === 'BUYER' && typedInv.party_id) {
-          const { data: buy } = await (supabase.from('buyers') as any)
-            .select('*')
-            .eq('id', typedInv.party_id)
-            .single();
-          if (buy) {
-            partyName = (buy as DbBuyer).name;
-          }
-        }
-
-        setInvoice({
-          ...typedInv,
-          items: (items as DbInvoiceItem[]) || [],
-          party_name: partyName,
-          items_count: (items as DbInvoiceItem[])?.length || 0,
-        });
+        const data = await invoiceService.getInvoiceById(id as string);
+        setInvoice(data);
       } catch (err) {
         setError((err as Error).message || 'Failed to load invoice.');
       } finally {

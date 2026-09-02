@@ -170,14 +170,39 @@ describe('Invoice Core Module Unit Tests', () => {
     });
   });
 
-  describe('Sequential Invoice Numbering Strategy', () => {
-    it('should format sequential numbers with 4 digits padding', () => {
-      const generateNumber = (count: number) => `INV-${String(count + 1).padStart(4, '0')}`;
+  describe('Phase 20B — Invoice Items Persistence and Special Characters', () => {
+    it('should validate and calculate invoice items with special characters and decimals', () => {
+      const items = [
+        { item_name: 'Cotton Fabric', quantity: 10, rate_rupees: 100 },
+        { item_name: '3.8MM ROSE GOLD', quantity: 5.5, rate_rupees: 200.5 },
+        { item_name: 'Cotton & Silk "Premium"', quantity: 2, rate_rupees: 1500 },
+        { item_name: 'સુતરાઉ કાપડ (Gujarati Fabric)', quantity: 3, rate_rupees: 450 },
+      ];
 
-      expect(generateNumber(0)).toBe('INV-0001');
-      expect(generateNumber(9)).toBe('INV-0010');
-      expect(generateNumber(99)).toBe('INV-0100');
-      expect(generateNumber(1005)).toBe('INV-1006');
+      const validation = invoiceFormSchema.safeParse({
+        invoice_number: 'INV-0005',
+        party_type: 'CUSTOMER',
+        party_id: 'cust-uuid-5678',
+        party_name: 'Bharat Enterprise',
+        invoice_date: '2026-09-02',
+        items,
+        paid_amount_rupees: 1000,
+      });
+
+      expect(validation.success).toBe(true);
+
+      const calculatedAmounts = items.map(it => ({
+        name: it.item_name,
+        amountPaise: Math.round(it.quantity * rupeesToPaise(it.rate_rupees)),
+      }));
+
+      expect(calculatedAmounts[0].amountPaise).toBe(100000); // 10 * 100 = 1000 INR = 100,000 paise
+      expect(calculatedAmounts[1].amountPaise).toBe(110275); // 5.5 * 200.5 = 1102.75 INR = 110,275 paise
+      expect(calculatedAmounts[2].amountPaise).toBe(300000); // 2 * 1500 = 3000 INR = 300,000 paise
+      expect(calculatedAmounts[3].amountPaise).toBe(135000); // 3 * 450 = 1350 INR = 135,000 paise
+
+      const totalPaise = calculatedAmounts.reduce((sum, it) => sum + it.amountPaise, 0);
+      expect(totalPaise).toBe(645275); // 6,452.75 INR
     });
   });
 });

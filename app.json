@@ -19,6 +19,7 @@
     "android": {
       "package": "com.shayona.invoice",
       "versionCode": 1,
+      "softwareKeyboardLayoutMode": "pan",
       "adaptiveIcon": {
         "backgroundColor": "#1E293B",
         "foregroundImage": "./assets/images/android-icon-foreground.png"

@@ -9,6 +9,8 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -260,7 +262,10 @@ export default function BuyersScreen() {
         transparent
         onRequestClose={() => setIsAddModalOpen(false)}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalOverlay}
+        >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <AppText variant="h3">{t.buyers.createBuyerTitle}</AppText>
@@ -274,7 +279,11 @@ export default function BuyersScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            >
               <AppTextInput
                 label={`${t.buyers.buyerName} *`}
                 placeholder="e.g. Mahavir Textiles"
@@ -324,7 +333,7 @@ export default function BuyersScreen() {
               </View>
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </AppScreenContainer>
   );

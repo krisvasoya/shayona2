@@ -8,6 +8,8 @@ import {
   Linking,
   Modal,
   ActivityIndicator,
+  Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -377,7 +379,10 @@ export default function CustomerDetailScreen() {
         transparent
         onRequestClose={() => setIsEditModalOpen(false)}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalOverlay}
+        >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <AppText variant="h3">Edit Customer</AppText>
@@ -386,7 +391,11 @@ export default function CustomerDetailScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            >
               <AppTextInput
                 label="Customer Name *"
                 placeholder="e.g. Ramesh Patel"
@@ -432,7 +441,7 @@ export default function CustomerDetailScreen() {
               </View>
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </AppScreenContainer>
   );
