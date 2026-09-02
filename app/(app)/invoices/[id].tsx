@@ -11,25 +11,25 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/src/services/supabase/client';
 import { useDeleteInvoice } from '@/src/features/invoices';
+import { pdfService } from '@/src/services/pdf.service';
+import { useAuthStore } from '@/src/store/authStore';
 import { AppScreenContainer, AppText, AppCard, AppButton, AppBadge } from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
-import { DbInvoice, DbInvoiceItem } from '@/src/types/database';
+import { DbInvoice, DbInvoiceItem, DbProfile } from '@/src/types/database';
+import { InvoiceDetail } from '@/src/types/invoice';
 import { formatCurrency } from '@/src/utils';
-
-interface InvoiceFullDetail extends DbInvoice {
-  items: DbInvoiceItem[];
-  party_name?: string;
-}
 
 export default function InvoiceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
 
-  const [invoice, setInvoice] = useState<InvoiceFullDetail | null>(null);
+  const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
 
+  const profile = useAuthStore(state => state.profile);
   const deleteInvoiceMutation = useDeleteInvoice();
 
   useEffect(() => {
@@ -78,6 +78,7 @@ export default function InvoiceDetailScreen() {
           ...typedInv,
           items: (items as DbInvoiceItem[]) || [],
           party_name: partyName,
+          items_count: (items as DbInvoiceItem[])?.length || 0,
         });
       } catch (err) {
         setError((err as Error).message || 'Failed to load invoice.');
@@ -90,6 +91,37 @@ export default function InvoiceDetailScreen() {
       loadInvoice();
     }
   }, [id]);
+
+  const handleGenerateAndSharePdf = async (lang: 'en' | 'gu' = 'en') => {
+    if (!invoice) return;
+
+    try {
+      setGeneratingPdf(true);
+
+      const userProfile: DbProfile = (profile as DbProfile) || {
+        id: invoice.user_id,
+        name: 'Shop Owner',
+        email: null,
+        phone: null,
+        shop_name: 'Shayona Enterprise',
+        language: lang,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const { uri } = await pdfService.createInvoicePdf({
+        invoice,
+        profile: userProfile,
+        language: lang,
+      });
+
+      await pdfService.shareInvoicePdf(uri);
+    } catch (err) {
+      Alert.alert('PDF Generation Error', (err as Error).message || 'Unable to generate PDF.');
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
 
   const handleDeleteInvoice = () => {
     if (!invoice) return;
@@ -245,6 +277,25 @@ export default function InvoiceDetailScreen() {
           )}
         </AppCard>
 
+        {/* Action Buttons: PDF Generation */}
+        <View style={styles.pdfActionsRow}>
+          <AppButton
+            title="📄 View / Share PDF (English)"
+            variant="primary"
+            loading={generatingPdf}
+            onPress={() => handleGenerateAndSharePdf('en')}
+            style={{ flex: 1 }}
+          />
+
+          <AppButton
+            title="ગુજરાતી PDF"
+            variant="outline"
+            loading={generatingPdf}
+            onPress={() => handleGenerateAndSharePdf('gu')}
+            style={{ minWidth: 120 }}
+          />
+        </View>
+
         {/* Itemized Table */}
         <AppCard style={styles.card}>
           <AppText variant="bodyLargeBold" style={{ marginBottom: spacing.sm }}>
@@ -374,6 +425,11 @@ const styles = StyleSheet.create({
   },
   actionIconBtn: {
     padding: spacing.xs,
+  },
+  pdfActionsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   scrollContent: {
     paddingBottom: spacing.xxl,

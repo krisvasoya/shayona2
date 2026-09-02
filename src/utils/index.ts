@@ -1,9 +1,10 @@
 /**
  * Core Utility Functions
- * Safe monetary formatting and arithmetic (paise-based integer arithmetic).
+ * Safe monetary formatting, arithmetic, and number-to-words.
  */
 
 export * from './phone';
+export * from './numberToWords';
 
 /**
  * Format integer paise into display INR currency string (e.g. 1000000 -> ₹10,000.00)
