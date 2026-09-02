@@ -156,9 +156,8 @@ export default function DashboardScreen() {
           style={styles.newBillBtn}
           onPress={() => router.push('/(app)/invoices/create')}
         >
-          <Ionicons name="add" size={18} color="#FFFFFF" />
           <AppText variant="bodyLargeBold" style={styles.newBillBtnText}>
-            {t.dashboard.newBill || 'New Bill'}
+            {t.dashboard.newBill || '+ New Bill'}
           </AppText>
         </TouchableOpacity>
       </View>
