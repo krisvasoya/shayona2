@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Image, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Image, ActivityIndicator, AppState } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { supabase } from '@/src/services/supabase/client';
 import { useAuthStore } from '@/src/store/authStore';
 import { authService } from '@/src/services/auth.service';
+import { networkService } from '@/src/services/network.service';
+import { syncService } from '@/src/services/sync.service';
 import { colors } from '@/src/theme/colors';
 import { AppText } from '@/src/components/common';
 
@@ -28,25 +30,41 @@ export default function RootLayout() {
   );
 
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const user = useAuthStore(state => state.user);
   const isInitialized = useAuthStore(state => state.isInitialized);
   const initialize = useAuthStore(state => state.initialize);
   const setSession = useAuthStore(state => state.setSession);
 
-  // Initialize auth session on mount
+  // Initialize network listener and auth session on mount
   useEffect(() => {
     initialize();
+    const unsubNetwork = networkService.init();
 
     // Listen to Supabase auth state changes
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         const profile = await authService.getUserProfile(session.user.id, session.user);
         setSession(session, profile);
+        // Trigger sync when session established
+        syncService.syncAll(session.user.id).catch(() => {});
       } else if (event === 'SIGNED_OUT') {
         setSession(null, null);
       }
     });
 
+    // App state listener for foreground sync
+    const appStateSub = AppState.addEventListener('change', nextState => {
+      if (nextState === 'active') {
+        const currentUser = useAuthStore.getState().user;
+        if (currentUser?.id && networkService.isOnline()) {
+          syncService.syncAll(currentUser.id).catch(() => {});
+        }
+      }
+    });
+
     return () => {
+      unsubNetwork();
+      appStateSub.remove();
       authListener.subscription.unsubscribe();
     };
   }, [initialize, setSession]);
@@ -63,8 +81,11 @@ export default function RootLayout() {
     } else if (isAuthenticated && inAuthGroup) {
       // Redirect authenticated user to dashboard
       router.replace('/(app)/(tabs)');
+      if (user?.id && networkService.isOnline()) {
+        syncService.syncAll(user.id).catch(() => {});
+      }
     }
-  }, [isAuthenticated, isInitialized, segments, router]);
+  }, [isAuthenticated, isInitialized, segments, router, user?.id]);
 
   // Render splash/loading screen while checking stored session
   if (!isInitialized) {

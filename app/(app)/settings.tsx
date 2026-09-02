@@ -1,19 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AppScreenContainer, AppHeader, AppText, AppCard, AppBadge } from '@/src/components/common';
+import {
+  AppScreenContainer,
+  AppHeader,
+  AppText,
+  AppCard,
+  AppBadge,
+  AppButton,
+} from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
 import { borderRadius } from '@/src/theme/borderRadius';
 import { useAuth } from '@/src/features/auth';
 import { useLanguage, SupportedLanguage } from '@/src/localization';
 import { formatPhoneDisplay } from '@/src/utils/phone';
+import { syncService } from '@/src/services/sync.service';
+import { useNetworkStore } from '@/src/services/network.service';
+import { localStore } from '@/src/database/localStore';
 
 export default function SettingsScreen() {
   const { user, profile, signOut, isLoading } = useAuth();
   const { language, setLanguage, t } = useLanguage();
+  const isOnline = useNetworkStore(state => state.isOnline);
   const [loggingOut, setLoggingOut] = useState(false);
   const [savingLang, setSavingLang] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const fetchPendingCount = React.useCallback(async () => {
+    if (user?.id) {
+      const queue = await localStore.getSyncQueue(user.id);
+      setPendingCount(queue.length);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchPendingCount();
+  }, [fetchPendingCount]);
 
   const handleLanguageChange = async (newLang: SupportedLanguage) => {
     if (newLang === language) return;
@@ -22,6 +46,29 @@ export default function SettingsScreen() {
       await setLanguage(newLang, user?.id);
     } finally {
       setSavingLang(false);
+    }
+  };
+
+  const handleManualSync = async () => {
+    if (!user?.id) return;
+    if (!isOnline) {
+      Alert.alert(t.common.error, t.common.offlineMode);
+      return;
+    }
+
+    try {
+      setSyncing(true);
+      const res = await syncService.syncAll(user.id);
+      await fetchPendingCount();
+      if (res.success) {
+        Alert.alert(t.common.success, t.settings.allSynced);
+      } else {
+        Alert.alert(t.common.error, res.error || 'Sync encountered issues');
+      }
+    } catch (err) {
+      Alert.alert(t.common.error, (err as Error).message || 'Sync failed');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -131,6 +178,39 @@ export default function SettingsScreen() {
             </View>
             {language === 'gu' && <AppBadge label="સક્રિય" variant="success" />}
           </TouchableOpacity>
+        </View>
+      </AppCard>
+
+      {/* Data Synchronization Card */}
+      <AppCard>
+        <AppText variant="h4" style={styles.cardSectionTitle}>
+          {t.settings.dataSync}
+        </AppText>
+        <View style={styles.settingRow}>
+          <View>
+            <AppText variant="bodyMedium">
+              {isOnline ? t.settings.onlineStatus : t.settings.offlineStatus}
+            </AppText>
+            <AppText variant="caption" color={colors.textSecondary}>
+              {pendingCount === 0
+                ? t.settings.allSynced
+                : `${pendingCount} ${t.settings.pendingSync}`}
+            </AppText>
+          </View>
+          <AppBadge
+            label={isOnline ? t.settings.onlineStatus : t.settings.offlineStatus}
+            variant={isOnline ? 'success' : 'warning'}
+          />
+        </View>
+        <View style={{ marginTop: spacing.md }}>
+          <AppButton
+            title={syncing ? t.settings.syncing : t.settings.syncNow}
+            onPress={handleManualSync}
+            loading={syncing}
+            disabled={!isOnline || syncing}
+            variant="outline"
+            icon={<Ionicons name="sync" size={16} color={colors.primary} />}
+          />
         </View>
       </AppCard>
 

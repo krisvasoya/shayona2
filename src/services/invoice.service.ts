@@ -1,7 +1,12 @@
+import * as Crypto from 'expo-crypto';
 import { supabase } from './supabase/client';
+import { localStore } from '@/src/database/localStore';
+import { LocalInvoice, LocalInvoiceItem } from '@/src/database/types';
 import { InvoiceSummary, InvoiceDetail, InvoiceFormData } from '@/src/types/invoice';
-import { DbInvoice, DbInvoiceItem, PartyType } from '@/src/types/database';
+import { PartyType } from '@/src/types/database';
 import { rupeesToPaise } from '@/src/utils';
+import { syncService } from './sync.service';
+import { networkService } from './network.service';
 
 export interface InvoiceFilters {
   partyType?: PartyType;
@@ -17,7 +22,7 @@ export interface InvoiceOperationResult<T = unknown> {
 export const invoiceService = {
   /**
    * Generates the next sequential invoice number for the authenticated user
-   * (e.g. INV-0001, INV-0002)
+   * (e.g. INV-0001, INV-0002) completely offline-safe
    */
   async getNextInvoiceNumber(): Promise<string> {
     const { data: userData } = await supabase.auth.getUser();
@@ -25,20 +30,26 @@ export const invoiceService = {
       return 'INV-0001';
     }
 
-    const { count, error } = await (supabase.from('invoices') as any)
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userData.user.id);
+    const userId = userData.user.id;
+    const localInvoices = await localStore.getInvoices(userId);
 
-    if (error || count === null || count === undefined) {
-      return 'INV-0001';
-    }
+    let maxNum = 0;
+    localInvoices.forEach(inv => {
+      const match = (inv.invoice_number || '').match(/INV-(\d+)/i);
+      if (match && match[1]) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > maxNum) {
+          maxNum = num;
+        }
+      }
+    });
 
-    const nextNumber = count + 1;
+    const nextNumber = maxNum + 1;
     return `INV-${String(nextNumber).padStart(4, '0')}`;
   },
 
   /**
-   * Fetch all invoices with filters, party names, and item counts
+   * Fetch all invoices with filters, party names, and item counts (Offline-First)
    */
   async getInvoices(filters?: InvoiceFilters): Promise<InvoiceSummary[]> {
     const { data: userData } = await supabase.auth.getUser();
@@ -48,55 +59,46 @@ export const invoiceService = {
 
     const userId = userData.user.id;
 
-    // 1. Fetch invoices
-    let query = (supabase.from('invoices') as any)
-      .select('*')
-      .eq('user_id', userId)
-      .order('invoice_date', { ascending: false })
-      .order('created_at', { ascending: false });
-
-    if (filters?.partyType) {
-      query = query.eq('party_type', filters.partyType);
+    // Background pull if online
+    if (networkService.isOnline()) {
+      syncService.pullFromServer(userId).catch(() => {});
     }
 
-    if (filters?.paymentStatus === 'PAID') {
-      query = query.eq('remaining_amount', 0);
-    } else if (filters?.paymentStatus === 'BAKI') {
-      query = query.gt('remaining_amount', 0);
-    }
+    // 1. Read local invoices
+    const allInvoices = await localStore.getInvoices(userId);
 
-    const { data: invoices, error: invErr } = await query;
-    if (invErr) {
-      throw new Error(invErr.message || 'Failed to fetch invoices.');
-    }
-
-    if (!invoices || (invoices as DbInvoice[]).length === 0) {
-      return [];
-    }
-
-    const typedInvoices = invoices as DbInvoice[];
-
-    // 2. Fetch party names and line item counts
-    const [customersRes, buyersRes, itemsRes] = await Promise.all([
-      (supabase.from('customers') as any).select('id, name').eq('user_id', userId),
-      (supabase.from('buyers') as any).select('id, name').eq('user_id', userId),
-      (supabase.from('invoice_items') as any).select('id, invoice_id'),
+    // 2. Read party lookups and item counts
+    const [customers, buyers, items] = await Promise.all([
+      localStore.getCustomers(userId),
+      localStore.getBuyers(userId),
+      localStore.getInvoiceItems(userId),
     ]);
 
     const customerMap = new Map<string, string>();
-    (customersRes.data || []).forEach((c: { id: string; name: string }) =>
-      customerMap.set(c.id, c.name),
-    );
+    customers.forEach(c => customerMap.set(c.id, c.name));
 
     const buyerMap = new Map<string, string>();
-    (buyersRes.data || []).forEach((b: { id: string; name: string }) => buyerMap.set(b.id, b.name));
+    buyers.forEach(b => buyerMap.set(b.id, b.name));
 
     const itemsCountMap = new Map<string, number>();
-    (itemsRes.data || []).forEach((item: { invoice_id: string }) => {
+    items.forEach(item => {
       itemsCountMap.set(item.invoice_id, (itemsCountMap.get(item.invoice_id) || 0) + 1);
     });
 
-    let results: InvoiceSummary[] = typedInvoices.map(inv => {
+    // 3. Filter local invoices
+    let filtered = allInvoices;
+
+    if (filters?.partyType) {
+      filtered = filtered.filter(inv => inv.party_type === filters.partyType);
+    }
+
+    if (filters?.paymentStatus === 'PAID') {
+      filtered = filtered.filter(inv => Number(inv.remaining_amount || 0) === 0);
+    } else if (filters?.paymentStatus === 'BAKI') {
+      filtered = filtered.filter(inv => Number(inv.remaining_amount || 0) > 0);
+    }
+
+    let results: InvoiceSummary[] = filtered.map(inv => {
       let partyName = 'Party';
       if (inv.party_type === 'CUSTOMER') {
         partyName = customerMap.get(inv.party_id) || 'Customer';
@@ -105,28 +107,41 @@ export const invoiceService = {
       }
 
       return {
-        ...inv,
+        id: inv.id,
+        user_id: inv.user_id,
+        invoice_number: inv.invoice_number,
+        invoice_date: inv.invoice_date,
+        party_type: inv.party_type as PartyType,
+        party_id: inv.party_id,
         party_name: partyName,
+        total_amount: Number(inv.total_amount || 0),
+        paid_amount: Number(inv.paid_amount || 0),
+        remaining_amount: Number(inv.remaining_amount || 0),
+        pdf_path: inv.pdf_path || null,
+        notes: inv.notes || null,
         items_count: itemsCountMap.get(inv.id) || 0,
+        created_at: inv.created_at,
+        updated_at: inv.updated_at,
       };
     });
 
-    // 3. Client-side search filtering by invoice number or party name
     if (filters?.searchQuery && filters.searchQuery.trim().length > 0) {
       const q = filters.searchQuery.trim().toLowerCase();
       results = results.filter(
         inv =>
-          inv.invoice_number.toLowerCase().includes(q) ||
-          inv.party_name.toLowerCase().includes(q) ||
-          inv.notes?.toLowerCase().includes(q),
+          inv.invoice_number.toLowerCase().includes(q) || inv.party_name.toLowerCase().includes(q),
       );
     }
 
-    return results;
+    return results.sort((a, b) => {
+      const dateCmp = new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime();
+      if (dateCmp !== 0) return dateCmp;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
   },
 
   /**
-   * Fetch single invoice with all line items and party name
+   * Fetch single invoice with line items (Offline-First)
    */
   async getInvoiceById(invoiceId: string): Promise<InvoiceDetail> {
     const { data: userData } = await supabase.auth.getUser();
@@ -136,49 +151,92 @@ export const invoiceService = {
 
     const userId = userData.user.id;
 
-    // 1. Fetch invoice header
-    const { data: invoice, error: invErr } = await (supabase.from('invoices') as any)
-      .select('*')
-      .eq('id', invoiceId)
-      .eq('user_id', userId)
-      .single();
+    // 1. Fetch invoice from localStore
+    let invoice = await localStore.getInvoiceById(userId, invoiceId);
 
-    if (invErr || !invoice) {
-      throw new Error(invErr?.message || 'Invoice not found.');
+    // If not found locally and online, try server
+    if (!invoice && networkService.isOnline()) {
+      const { data: serverInv } = await (supabase.from('invoices') as any)
+        .select('*')
+        .eq('id', invoiceId)
+        .eq('user_id', userId)
+        .single();
+
+      if (serverInv) {
+        const localInv: LocalInvoice = {
+          ...serverInv,
+          sync_status: 'SYNCED',
+          local_updated_at: serverInv.updated_at,
+        };
+        await localStore.upsertInvoice(userId, localInv);
+        invoice = localInv;
+
+        const { data: serverItems } = await (supabase.from('invoice_items') as any)
+          .select('*')
+          .eq('invoice_id', invoiceId);
+        if (serverItems) {
+          await localStore.setInvoiceItemsForInvoice(
+            userId,
+            invoiceId,
+            serverItems.map((si: any) => ({
+              ...si,
+              sync_status: 'SYNCED',
+              local_updated_at: si.created_at,
+            })),
+          );
+        }
+      }
     }
 
-    const typedInvoice = invoice as DbInvoice;
+    if (!invoice) {
+      throw new Error('Invoice not found.');
+    }
 
-    // 2. Fetch line items and party name in parallel
-    const [itemsRes, partyRes] = await Promise.all([
-      (supabase.from('invoice_items') as any)
-        .select('*')
-        .eq('invoice_id', invoiceId)
-        .order('created_at', { ascending: true }),
-      typedInvoice.party_type === 'CUSTOMER'
-        ? (supabase.from('customers') as any)
-            .select('name')
-            .eq('id', typedInvoice.party_id)
-            .single()
-        : (supabase.from('buyers') as any).select('name').eq('id', typedInvoice.party_id).single(),
-    ]);
+    // 2. Fetch line items
+    const items = await localStore.getInvoiceItems(userId, invoiceId);
 
-    const partyName =
-      partyRes.data?.name || (typedInvoice.party_type === 'CUSTOMER' ? 'Customer' : 'Buyer');
-    const items = (itemsRes.data as DbInvoiceItem[]) || [];
+    // 3. Fetch party name
+    let partyName = 'Party';
+    if (invoice.party_type === 'CUSTOMER') {
+      const cust = await localStore.getCustomerById(userId, invoice.party_id);
+      partyName = cust?.name || 'Customer';
+    } else if (invoice.party_type === 'BUYER') {
+      const buy = await localStore.getBuyerById(userId, invoice.party_id);
+      partyName = buy?.name || 'Buyer';
+    }
 
     return {
-      ...typedInvoice,
+      id: invoice.id,
+      user_id: invoice.user_id,
+      invoice_number: invoice.invoice_number,
+      invoice_date: invoice.invoice_date,
+      party_type: invoice.party_type as PartyType,
+      party_id: invoice.party_id,
       party_name: partyName,
+      total_amount: Number(invoice.total_amount || 0),
+      paid_amount: Number(invoice.paid_amount || 0),
+      remaining_amount: Number(invoice.remaining_amount || 0),
+      pdf_path: invoice.pdf_path,
+      notes: invoice.notes,
       items_count: items.length,
-      items,
+      created_at: invoice.created_at,
+      updated_at: invoice.updated_at,
+      items: items.map(it => ({
+        id: it.id,
+        invoice_id: it.invoice_id,
+        item_name: it.item_name,
+        quantity: Number(it.quantity),
+        rate: Number(it.rate),
+        amount: Number(it.amount),
+        created_at: it.created_at,
+      })),
     };
   },
 
   /**
-   * Create new invoice with line items (Transactionally safe)
+   * Create a new invoice with line items (Offline-First: Local save with stable UUID + sync queue)
    */
-  async createInvoice(formData: InvoiceFormData): Promise<InvoiceOperationResult<DbInvoice>> {
+  async createInvoice(data: InvoiceFormData): Promise<InvoiceOperationResult<InvoiceDetail>> {
     try {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) {
@@ -186,81 +244,140 @@ export const invoiceService = {
       }
 
       const userId = userData.user.id;
+      const invoiceId = Crypto.randomUUID();
+      const now = new Date().toISOString();
 
-      if (!formData.items || formData.items.length === 0) {
-        return { data: null, error: 'At least one line item is required.' };
-      }
+      // Financial calculations in paise
+      const totalAmountPaise = data.items.reduce((sum, item) => {
+        const itemQty = Number(item.quantity) || 0;
+        const itemRateRupees = Number(item.rate_rupees) || 0;
+        return sum + Math.round(itemQty * rupeesToPaise(itemRateRupees));
+      }, 0);
 
-      // 1. Calculate item amounts and total in integer Paise
-      const calculatedItems = formData.items.map(item => {
-        const ratePaise = rupeesToPaise(item.rate_rupees);
-        const amountPaise = Math.round(Number(item.quantity) * ratePaise);
+      const paidAmountPaise = data.paid_amount_rupees
+        ? rupeesToPaise(Number(data.paid_amount_rupees))
+        : 0;
+      const remainingAmountPaise = Math.max(0, totalAmountPaise - paidAmountPaise);
+
+      // Line items with stable UUIDs
+      const localItems: LocalInvoiceItem[] = data.items.map(item => {
+        const itemQty = Number(item.quantity) || 0;
+        const itemRateRupees = Number(item.rate_rupees) || 0;
+        const itemRatePaise = rupeesToPaise(itemRateRupees);
+        const itemAmountPaise = Math.round(itemQty * itemRatePaise);
+
         return {
+          id: Crypto.randomUUID(),
+          invoice_id: invoiceId,
           item_name: item.item_name.trim(),
-          quantity: Number(item.quantity),
-          rate: ratePaise,
-          amount: amountPaise,
+          quantity: itemQty,
+          rate: itemRatePaise,
+          amount: itemAmountPaise,
+          created_at: now,
+          sync_status: 'PENDING_CREATE',
+          local_updated_at: now,
         };
       });
 
-      const totalAmountPaise = calculatedItems.reduce((sum, it) => sum + it.amount, 0);
-      const paidAmountPaise = rupeesToPaise(formData.paid_amount_rupees);
-      const remainingAmountPaise = Math.max(0, totalAmountPaise - paidAmountPaise);
+      const localInvoice: LocalInvoice = {
+        id: invoiceId,
+        user_id: userId,
+        invoice_number: data.invoice_number.trim(),
+        party_type: data.party_type,
+        party_id: data.party_id,
+        invoice_date: data.invoice_date,
+        total_amount: totalAmountPaise,
+        paid_amount: paidAmountPaise,
+        remaining_amount: remainingAmountPaise,
+        pdf_path: null,
+        notes: data.notes?.trim() || null,
+        created_at: now,
+        updated_at: now,
+        sync_status: 'PENDING_CREATE',
+        local_updated_at: now,
+      };
 
-      // 2. Insert invoice header
-      const { data: newInvoice, error: invErr } = await (supabase.from('invoices') as any)
-        .insert({
-          user_id: userId,
-          invoice_number: formData.invoice_number.trim(),
-          party_type: formData.party_type,
-          party_id: formData.party_id,
-          invoice_date: formData.invoice_date,
-          total_amount: totalAmountPaise,
-          paid_amount: paidAmountPaise,
-          remaining_amount: remainingAmountPaise,
-          notes: formData.notes?.trim() || null,
-        })
-        .select()
-        .single();
+      // 1. Save to local database immediately
+      await localStore.upsertInvoice(userId, localInvoice);
+      await localStore.setInvoiceItemsForInvoice(userId, invoiceId, localItems);
 
-      if (invErr || !newInvoice) {
-        return { data: null, error: invErr?.message || 'Failed to create invoice header.' };
+      // 2. Enqueue mutation with full payload
+      await localStore.enqueueSyncItem(userId, {
+        id: Crypto.randomUUID(),
+        user_id: userId,
+        entity: 'INVOICE',
+        entity_id: invoiceId,
+        operation: 'CREATE',
+        payload: {
+          invoice_number: localInvoice.invoice_number,
+          party_type: localInvoice.party_type,
+          party_id: localInvoice.party_id,
+          invoice_date: localInvoice.invoice_date,
+          total_amount: localInvoice.total_amount,
+          paid_amount: localInvoice.paid_amount,
+          remaining_amount: localInvoice.remaining_amount,
+          notes: localInvoice.notes,
+          items: localItems,
+        },
+        created_at: now,
+        retry_count: 0,
+      });
+
+      // 3. Trigger background sync if online
+      if (networkService.isOnline()) {
+        syncService.processQueue(userId).catch(() => {});
       }
 
-      const invoiceId = (newInvoice as DbInvoice).id;
-
-      // 3. Insert line items
-      const lineItemsPayload = calculatedItems.map(item => ({
-        invoice_id: invoiceId,
-        item_name: item.item_name,
-        quantity: item.quantity,
-        rate: item.rate,
-        amount: item.amount,
-      }));
-
-      const { error: itemsErr } = await (supabase.from('invoice_items') as any).insert(
-        lineItemsPayload,
-      );
-
-      if (itemsErr) {
-        // Rollback invoice header if items insertion failed
-        await (supabase.from('invoices') as any).delete().eq('id', invoiceId);
-        return { data: null, error: itemsErr.message || 'Failed to save invoice line items.' };
+      // Party lookup for return object
+      let partyName = 'Party';
+      if (data.party_type === 'CUSTOMER') {
+        const cust = await localStore.getCustomerById(userId, data.party_id);
+        partyName = cust?.name || 'Customer';
+      } else if (data.party_type === 'BUYER') {
+        const buy = await localStore.getBuyerById(userId, data.party_id);
+        partyName = buy?.name || 'Buyer';
       }
 
-      return { data: newInvoice as DbInvoice };
+      const createdDetail: InvoiceDetail = {
+        id: localInvoice.id,
+        user_id: localInvoice.user_id,
+        invoice_number: localInvoice.invoice_number,
+        invoice_date: localInvoice.invoice_date,
+        party_type: localInvoice.party_type as PartyType,
+        party_id: localInvoice.party_id,
+        party_name: partyName,
+        total_amount: localInvoice.total_amount,
+        paid_amount: localInvoice.paid_amount,
+        remaining_amount: localInvoice.remaining_amount,
+        pdf_path: localInvoice.pdf_path,
+        notes: localInvoice.notes,
+        items_count: localItems.length,
+        created_at: localInvoice.created_at,
+        updated_at: localInvoice.updated_at,
+        items: localItems.map(it => ({
+          id: it.id,
+          invoice_id: it.invoice_id,
+          item_name: it.item_name,
+          quantity: it.quantity,
+          rate: it.rate,
+          amount: it.amount,
+          created_at: it.created_at,
+        })),
+      };
+
+      return { data: createdDetail };
     } catch (err) {
-      return { data: null, error: (err as Error).message || 'Unexpected error creating invoice.' };
+      return { data: null, error: (err as Error).message || 'Failed to create invoice.' };
     }
   },
 
   /**
-   * Update existing invoice and replace line items
+   * Update an existing invoice (Offline-First)
    */
   async updateInvoice(
     invoiceId: string,
-    formData: InvoiceFormData,
-  ): Promise<InvoiceOperationResult<DbInvoice>> {
+    data: Partial<InvoiceFormData>,
+  ): Promise<InvoiceOperationResult<InvoiceDetail>> {
     try {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) {
@@ -268,74 +385,105 @@ export const invoiceService = {
       }
 
       const userId = userData.user.id;
-
-      if (!formData.items || formData.items.length === 0) {
-        return { data: null, error: 'At least one line item is required.' };
+      const existing = await localStore.getInvoiceById(userId, invoiceId);
+      if (!existing) {
+        return { data: null, error: 'Invoice not found.' };
       }
 
-      // 1. Calculate item amounts and total in integer Paise
-      const calculatedItems = formData.items.map(item => {
-        const ratePaise = rupeesToPaise(item.rate_rupees);
-        const amountPaise = Math.round(Number(item.quantity) * ratePaise);
-        return {
-          item_name: item.item_name.trim(),
-          quantity: Number(item.quantity),
-          rate: ratePaise,
-          amount: amountPaise,
-        };
+      const now = new Date().toISOString();
+      let totalAmountPaise = existing.total_amount;
+      let paidAmountPaise = existing.paid_amount;
+      let remainingAmountPaise = existing.remaining_amount;
+      let localItems = await localStore.getInvoiceItems(userId, invoiceId);
+
+      if (data.items) {
+        totalAmountPaise = data.items.reduce((sum, item) => {
+          const itemQty = Number(item.quantity) || 0;
+          const itemRateRupees = Number(item.rate_rupees) || 0;
+          return sum + Math.round(itemQty * rupeesToPaise(itemRateRupees));
+        }, 0);
+
+        localItems = data.items.map(item => {
+          const itemQty = Number(item.quantity) || 0;
+          const itemRateRupees = Number(item.rate_rupees) || 0;
+          const itemRatePaise = rupeesToPaise(itemRateRupees);
+          const itemAmountPaise = Math.round(itemQty * itemRatePaise);
+
+          return {
+            id: Crypto.randomUUID(),
+            invoice_id: invoiceId,
+            item_name: item.item_name.trim(),
+            quantity: itemQty,
+            rate: itemRatePaise,
+            amount: itemAmountPaise,
+            created_at: now,
+            sync_status: 'PENDING_UPDATE',
+            local_updated_at: now,
+          };
+        });
+      }
+
+      if (data.paid_amount_rupees !== undefined) {
+        paidAmountPaise = rupeesToPaise(Number(data.paid_amount_rupees));
+      }
+
+      remainingAmountPaise = Math.max(0, totalAmountPaise - paidAmountPaise);
+
+      const updatedInvoice: LocalInvoice = {
+        ...existing,
+        invoice_number: data.invoice_number ? data.invoice_number.trim() : existing.invoice_number,
+        party_type: data.party_type || existing.party_type,
+        party_id: data.party_id || existing.party_id,
+        invoice_date: data.invoice_date || existing.invoice_date,
+        total_amount: totalAmountPaise,
+        paid_amount: paidAmountPaise,
+        remaining_amount: remainingAmountPaise,
+        notes: data.notes !== undefined ? data.notes?.trim() || null : existing.notes,
+        updated_at: now,
+        sync_status: 'PENDING_UPDATE',
+        local_updated_at: now,
+      };
+
+      await localStore.upsertInvoice(userId, updatedInvoice);
+      if (data.items) {
+        await localStore.setInvoiceItemsForInvoice(userId, invoiceId, localItems);
+      }
+
+      // Enqueue mutation
+      await localStore.enqueueSyncItem(userId, {
+        id: Crypto.randomUUID(),
+        user_id: userId,
+        entity: 'INVOICE',
+        entity_id: invoiceId,
+        operation: 'UPDATE',
+        payload: {
+          invoice_number: updatedInvoice.invoice_number,
+          party_type: updatedInvoice.party_type,
+          party_id: updatedInvoice.party_id,
+          invoice_date: updatedInvoice.invoice_date,
+          total_amount: updatedInvoice.total_amount,
+          paid_amount: updatedInvoice.paid_amount,
+          remaining_amount: updatedInvoice.remaining_amount,
+          notes: updatedInvoice.notes,
+          items: localItems,
+        },
+        created_at: now,
+        retry_count: 0,
       });
 
-      const totalAmountPaise = calculatedItems.reduce((sum, it) => sum + it.amount, 0);
-      const paidAmountPaise = rupeesToPaise(formData.paid_amount_rupees);
-      const remainingAmountPaise = Math.max(0, totalAmountPaise - paidAmountPaise);
-
-      // 2. Update invoice header (Preserve invoice_number and ID)
-      const { data: updatedInvoice, error: updateErr } = await (supabase.from('invoices') as any)
-        .update({
-          party_type: formData.party_type,
-          party_id: formData.party_id,
-          invoice_date: formData.invoice_date,
-          total_amount: totalAmountPaise,
-          paid_amount: paidAmountPaise,
-          remaining_amount: remainingAmountPaise,
-          notes: formData.notes?.trim() || null,
-        })
-        .eq('id', invoiceId)
-        .eq('user_id', userId)
-        .select()
-        .single();
-
-      if (updateErr || !updatedInvoice) {
-        return { data: null, error: updateErr?.message || 'Failed to update invoice.' };
+      if (networkService.isOnline()) {
+        syncService.processQueue(userId).catch(() => {});
       }
 
-      // 3. Replace line items: delete previous items and re-insert
-      await (supabase.from('invoice_items') as any).delete().eq('invoice_id', invoiceId);
-
-      const lineItemsPayload = calculatedItems.map(item => ({
-        invoice_id: invoiceId,
-        item_name: item.item_name,
-        quantity: item.quantity,
-        rate: item.rate,
-        amount: item.amount,
-      }));
-
-      const { error: itemsErr } = await (supabase.from('invoice_items') as any).insert(
-        lineItemsPayload,
-      );
-
-      if (itemsErr) {
-        return { data: null, error: itemsErr.message || 'Failed to update line items.' };
-      }
-
-      return { data: updatedInvoice as DbInvoice };
+      const detail = await this.getInvoiceById(invoiceId);
+      return { data: detail };
     } catch (err) {
-      return { data: null, error: (err as Error).message || 'Unexpected error updating invoice.' };
+      return { data: null, error: (err as Error).message || 'Failed to update invoice.' };
     }
   },
 
   /**
-   * Delete invoice (cascades to invoice_items automatically)
+   * Delete an invoice (Offline-First)
    */
   async deleteInvoice(invoiceId: string): Promise<{ success: boolean; error?: string }> {
     try {
@@ -344,13 +492,24 @@ export const invoiceService = {
         return { success: false, error: 'User not authenticated.' };
       }
 
-      const { error } = await (supabase.from('invoices') as any)
-        .delete()
-        .eq('id', invoiceId)
-        .eq('user_id', userData.user.id);
+      const userId = userData.user.id;
+      const now = new Date().toISOString();
 
-      if (error) {
-        return { success: false, error: error.message || 'Failed to delete invoice.' };
+      await localStore.deleteInvoice(userId, invoiceId);
+
+      await localStore.enqueueSyncItem(userId, {
+        id: Crypto.randomUUID(),
+        user_id: userId,
+        entity: 'INVOICE',
+        entity_id: invoiceId,
+        operation: 'DELETE',
+        payload: null,
+        created_at: now,
+        retry_count: 0,
+      });
+
+      if (networkService.isOnline()) {
+        syncService.processQueue(userId).catch(() => {});
       }
 
       return { success: true };

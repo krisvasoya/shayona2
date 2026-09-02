@@ -1,7 +1,12 @@
+import * as Crypto from 'expo-crypto';
 import { supabase } from './supabase/client';
+import { localStore } from '@/src/database/localStore';
+import { LocalCustomer } from '@/src/database/types';
 import { CustomerSummary, CustomerDetail } from '@/src/types/customer';
-import { DbCustomer, DbInvoice } from '@/src/types/database';
+import { DbCustomer } from '@/src/types/database';
 import { normalizePhoneE164 } from '@/src/utils/phone';
+import { syncService } from './sync.service';
+import { networkService } from './network.service';
 
 export interface CustomerOperationResult<T = unknown> {
   data: T | null;
@@ -10,7 +15,7 @@ export interface CustomerOperationResult<T = unknown> {
 
 export const customerService = {
   /**
-   * Fetch all customers for the authenticated user with aggregated Baki/Jama totals
+   * Fetch all customers (Offline-First: Reads local immediately, refreshes in background if online)
    */
   async getCustomers(searchQuery?: string): Promise<CustomerSummary[]> {
     const { data: userData } = await supabase.auth.getUser();
@@ -20,52 +25,33 @@ export const customerService = {
 
     const userId = userData.user.id;
 
-    // 1. Fetch customers
-    let customerQuery = (supabase.from('customers') as any)
-      .select('*')
-      .eq('user_id', userId)
-      .order('name', { ascending: true });
+    // Background sync & pull if online
+    if (networkService.isOnline()) {
+      syncService.pullFromServer(userId).catch(() => {});
+    }
 
+    // 1. Read local customers
+    const localCustomers = await localStore.getCustomers(userId);
+
+    // Filter by search query if provided
+    let filtered = localCustomers;
     if (searchQuery && searchQuery.trim().length > 0) {
-      const cleanSearch = searchQuery.trim();
-      customerQuery = customerQuery.or(`name.ilike.%${cleanSearch}%,phone.ilike.%${cleanSearch}%`);
+      const q = searchQuery.trim().toLowerCase();
+      filtered = filtered.filter(
+        c => c.name.toLowerCase().includes(q) || (c.phone && c.phone.includes(q)),
+      );
     }
 
-    const { data: customers, error: customerErr } = await customerQuery;
-    if (customerErr) {
-      throw new Error(customerErr.message || 'Failed to fetch customers.');
-    }
+    // 2. Read local invoices to calculate ledger stats
+    const localInvoices = await localStore.getInvoices(userId);
+    const customerInvoices = localInvoices.filter(inv => inv.party_type === 'CUSTOMER');
 
-    if (!customers || (customers as DbCustomer[]).length === 0) {
-      return [];
-    }
-
-    const typedCustomers = customers as DbCustomer[];
-
-    // 2. Fetch customer invoices to calculate totals
-    const { data: invoices, error: invoiceErr } = await (supabase.from('invoices') as any)
-      .select('party_id, total_amount, paid_amount, remaining_amount')
-      .eq('user_id', userId)
-      .eq('party_type', 'CUSTOMER');
-
-    if (invoiceErr) {
-      // Return customers with 0 stats if invoices table query fails
-      return typedCustomers.map(c => ({
-        ...c,
-        total_bills: 0,
-        total_amount: 0,
-        total_jama: 0,
-        total_baki: 0,
-      }));
-    }
-
-    // Group invoices by party_id
     const statsMap: Record<
       string,
       { total_bills: number; total_amount: number; total_jama: number; total_baki: number }
     > = {};
 
-    ((invoices as DbInvoice[]) || []).forEach(inv => {
+    customerInvoices.forEach(inv => {
       if (!statsMap[inv.party_id]) {
         statsMap[inv.party_id] = { total_bills: 0, total_amount: 0, total_jama: 0, total_baki: 0 };
       }
@@ -75,22 +61,24 @@ export const customerService = {
       statsMap[inv.party_id].total_baki += Number(inv.remaining_amount || 0);
     });
 
-    return typedCustomers.map(c => {
-      const stats = statsMap[c.id] || {
-        total_bills: 0,
-        total_amount: 0,
-        total_jama: 0,
-        total_baki: 0,
-      };
-      return {
-        ...c,
-        ...stats,
-      };
-    });
+    return filtered
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(c => {
+        const stats = statsMap[c.id] || {
+          total_bills: 0,
+          total_amount: 0,
+          total_jama: 0,
+          total_baki: 0,
+        };
+        return {
+          ...c,
+          ...stats,
+        };
+      });
   },
 
   /**
-   * Fetch customer by ID including invoice ledger history
+   * Fetch customer by ID including invoice ledger history (Offline-First)
    */
   async getCustomerById(customerId: string): Promise<CustomerDetail> {
     const { data: userData } = await supabase.auth.getUser();
@@ -100,55 +88,59 @@ export const customerService = {
 
     const userId = userData.user.id;
 
-    // 1. Fetch customer record
-    const { data: customer, error: customerErr } = await (supabase.from('customers') as any)
-      .select('*')
-      .eq('id', customerId)
-      .eq('user_id', userId)
-      .single();
+    // 1. Fetch customer from localStore
+    let customer = await localStore.getCustomerById(userId, customerId);
 
-    if (customerErr || !customer) {
-      throw new Error(customerErr?.message || 'Customer not found.');
+    // If not found locally and online, try server
+    if (!customer && networkService.isOnline()) {
+      const { data: serverCust } = await (supabase.from('customers') as any)
+        .select('*')
+        .eq('id', customerId)
+        .eq('user_id', userId)
+        .single();
+      if (serverCust) {
+        const localCust: LocalCustomer = {
+          ...serverCust,
+          sync_status: 'SYNCED',
+          local_updated_at: serverCust.updated_at,
+        };
+        await localStore.upsertCustomer(userId, localCust);
+        customer = localCust;
+      }
     }
 
-    const typedCustomer = customer as DbCustomer;
-
-    // 2. Fetch invoice history
-    const { data: invoices, error: invoiceErr } = await (supabase.from('invoices') as any)
-      .select('*')
-      .eq('party_id', customerId)
-      .eq('party_type', 'CUSTOMER')
-      .eq('user_id', userId)
-      .order('invoice_date', { ascending: false });
-
-    if (invoiceErr) {
-      throw new Error(invoiceErr.message || 'Failed to fetch customer invoices.');
+    if (!customer) {
+      throw new Error('Customer not found.');
     }
 
-    const typedInvoices = (invoices as DbInvoice[]) || [];
+    // 2. Fetch customer invoices
+    const allInvoices = await localStore.getInvoices(userId);
+    const customerInvoices = allInvoices.filter(
+      inv => inv.party_id === customerId && inv.party_type === 'CUSTOMER',
+    );
 
     let totalAmount = 0;
     let totalJama = 0;
     let totalBaki = 0;
 
-    typedInvoices.forEach(inv => {
+    customerInvoices.forEach(inv => {
       totalAmount += Number(inv.total_amount || 0);
       totalJama += Number(inv.paid_amount || 0);
       totalBaki += Number(inv.remaining_amount || 0);
     });
 
     return {
-      ...typedCustomer,
-      total_bills: typedInvoices.length,
+      ...customer,
+      total_bills: customerInvoices.length,
       total_amount: totalAmount,
       total_jama: totalJama,
       total_baki: totalBaki,
-      invoices: typedInvoices,
+      invoices: customerInvoices,
     };
   },
 
   /**
-   * Create a new customer
+   * Create a new customer (Offline-First: Local save with stable UUID + sync queue)
    */
   async createCustomer(data: {
     name: string;
@@ -161,30 +153,55 @@ export const customerService = {
         return { data: null, error: 'User not authenticated.' };
       }
 
+      const userId = userData.user.id;
       const formattedPhone = data.phone ? normalizePhoneE164(data.phone) : null;
+      const stableId = Crypto.randomUUID();
+      const now = new Date().toISOString();
 
-      const { data: newCustomer, error } = await (supabase.from('customers') as any)
-        .insert({
-          user_id: userData.user.id,
-          name: data.name.trim(),
-          phone: formattedPhone,
-          address: data.address?.trim() || null,
-        })
-        .select()
-        .single();
+      const newCustomer: LocalCustomer = {
+        id: stableId,
+        user_id: userId,
+        name: data.name.trim(),
+        phone: formattedPhone,
+        address: data.address?.trim() || null,
+        created_at: now,
+        updated_at: now,
+        sync_status: 'PENDING_CREATE',
+        local_updated_at: now,
+      };
 
-      if (error) {
-        return { data: null, error: error.message || 'Failed to create customer.' };
+      // 1. Save to local database immediately
+      await localStore.upsertCustomer(userId, newCustomer);
+
+      // 2. Enqueue mutation
+      await localStore.enqueueSyncItem(userId, {
+        id: Crypto.randomUUID(),
+        user_id: userId,
+        entity: 'CUSTOMER',
+        entity_id: stableId,
+        operation: 'CREATE',
+        payload: {
+          name: newCustomer.name,
+          phone: newCustomer.phone,
+          address: newCustomer.address,
+        },
+        created_at: now,
+        retry_count: 0,
+      });
+
+      // 3. Trigger background sync if online
+      if (networkService.isOnline()) {
+        syncService.processQueue(userId).catch(() => {});
       }
 
-      return { data: newCustomer as DbCustomer };
+      return { data: newCustomer };
     } catch (err) {
       return { data: null, error: (err as Error).message || 'Unexpected error creating customer.' };
     }
   },
 
   /**
-   * Update an existing customer
+   * Update an existing customer (Offline-First)
    */
   async updateCustomer(
     customerId: string,
@@ -196,32 +213,55 @@ export const customerService = {
         return { data: null, error: 'User not authenticated.' };
       }
 
+      const userId = userData.user.id;
       const formattedPhone = data.phone ? normalizePhoneE164(data.phone) : null;
+      const now = new Date().toISOString();
 
-      const { data: updatedCustomer, error } = await (supabase.from('customers') as any)
-        .update({
-          name: data.name.trim(),
-          phone: formattedPhone,
-          address: data.address?.trim() || null,
-        })
-        .eq('id', customerId)
-        .eq('user_id', userData.user.id)
-        .select()
-        .single();
+      const existing = await localStore.getCustomerById(userId, customerId);
+      const updatedCustomer: LocalCustomer = {
+        id: customerId,
+        user_id: userId,
+        name: data.name.trim(),
+        phone: formattedPhone,
+        address: data.address?.trim() || null,
+        created_at: existing?.created_at || now,
+        updated_at: now,
+        sync_status: 'PENDING_UPDATE',
+        local_updated_at: now,
+      };
 
-      if (error) {
-        return { data: null, error: error.message || 'Failed to update customer.' };
+      // 1. Update localStore immediately
+      await localStore.upsertCustomer(userId, updatedCustomer);
+
+      // 2. Enqueue mutation
+      await localStore.enqueueSyncItem(userId, {
+        id: Crypto.randomUUID(),
+        user_id: userId,
+        entity: 'CUSTOMER',
+        entity_id: customerId,
+        operation: 'UPDATE',
+        payload: {
+          name: updatedCustomer.name,
+          phone: updatedCustomer.phone,
+          address: updatedCustomer.address,
+        },
+        created_at: now,
+        retry_count: 0,
+      });
+
+      // 3. Trigger background sync if online
+      if (networkService.isOnline()) {
+        syncService.processQueue(userId).catch(() => {});
       }
 
-      return { data: updatedCustomer as DbCustomer };
+      return { data: updatedCustomer };
     } catch (err) {
       return { data: null, error: (err as Error).message || 'Unexpected error updating customer.' };
     }
   },
 
   /**
-   * Safe Delete Customer
-   * Checks if customer has existing invoices. If so, prevents deletion to preserve ledger history.
+   * Safe Delete Customer (Offline-First)
    */
   async deleteCustomer(customerId: string): Promise<{ success: boolean; error?: string }> {
     try {
@@ -232,32 +272,44 @@ export const customerService = {
 
       const userId = userData.user.id;
 
-      // 1. Check for existing invoices
-      const { count, error: countErr } = await (supabase.from('invoices') as any)
-        .select('*', { count: 'exact', head: true })
-        .eq('party_id', customerId)
-        .eq('party_type', 'CUSTOMER')
-        .eq('user_id', userId);
+      // Check invoices in localStore
+      const invoices = await localStore.getInvoices(userId);
+      const hasInvoices = invoices.some(
+        inv => inv.party_id === customerId && inv.party_type === 'CUSTOMER',
+      );
 
-      if (countErr) {
-        return { success: false, error: 'Failed to verify customer invoice history.' };
-      }
-
-      if (count && count > 0) {
+      if (hasInvoices) {
         return {
           success: false,
-          error: `Cannot delete customer because they have ${count} existing invoice(s). Customer records must be preserved for invoice history.`,
+          error:
+            'Cannot delete customer because they have existing invoice(s). Customer records must be preserved for invoice history.',
         };
       }
 
-      // 2. Delete customer
-      const { error: deleteErr } = await (supabase.from('customers') as any)
-        .delete()
-        .eq('id', customerId)
-        .eq('user_id', userId);
+      const now = new Date().toISOString();
+      const existing = await localStore.getCustomerById(userId, customerId);
+      if (existing) {
+        await localStore.upsertCustomer(userId, {
+          ...existing,
+          sync_status: 'PENDING_DELETE',
+          local_updated_at: now,
+        });
+      }
 
-      if (deleteErr) {
-        return { success: false, error: deleteErr.message || 'Failed to delete customer.' };
+      // Enqueue delete mutation
+      await localStore.enqueueSyncItem(userId, {
+        id: Crypto.randomUUID(),
+        user_id: userId,
+        entity: 'CUSTOMER',
+        entity_id: customerId,
+        operation: 'DELETE',
+        payload: null,
+        created_at: now,
+        retry_count: 0,
+      });
+
+      if (networkService.isOnline()) {
+        syncService.processQueue(userId).catch(() => {});
       }
 
       return { success: true };
