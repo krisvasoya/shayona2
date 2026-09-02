@@ -11,6 +11,37 @@ export interface InvoicePdfOptions {
   language?: SupportedLanguage;
 }
 
+const SHORT_MONTHS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+export function formatInvoiceDate(dateString: string): string {
+  try {
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+      const year = parts[0];
+      const monthIndex = parseInt(parts[1], 10) - 1;
+      const day = parts[2].padStart(2, '0');
+      const month = SHORT_MONTHS[monthIndex] || parts[1];
+      return `${day} ${month} ${year}`;
+    }
+  } catch {
+    // fallback
+  }
+  return dateString;
+}
+
 export const pdfService = {
   /**
    * Generates clean, professional, non-GST printable HTML for the invoice
@@ -22,11 +53,7 @@ export const pdfService = {
     const isGu = language === 'gu';
 
     // Format Date: e.g. "04 Jul 2026"
-    const formattedDate = new Date(invoice.invoice_date).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
+    const formattedDate = formatInvoiceDate(invoice.invoice_date);
 
     const shopName = profile.shop_name || 'Shayona Enterprise';
     const shopPhone = profile.phone ? formatPhoneDisplay(profile.phone) : '';
@@ -70,16 +97,14 @@ export const pdfService = {
     const itemsRowsHtml = invoice.items
       .map((item, index) => {
         const itemQty = Number(item.quantity);
-        const itemRateRupees = paiseToRupees(Number(item.rate));
-        const itemAmountRupees = paiseToRupees(Number(item.amount));
 
         return `
           <tr class="item-row">
             <td class="col-num">${index + 1}</td>
             <td class="col-desc">${item.item_name}</td>
             <td class="col-qty">${itemQty}</td>
-            <td class="col-rate">₹${itemRateRupees.toFixed(2)}</td>
-            <td class="col-amount">₹${itemAmountRupees.toFixed(2)}</td>
+            <td class="col-rate">${formatCurrency(Number(item.rate))}</td>
+            <td class="col-amount">${formatCurrency(Number(item.amount))}</td>
           </tr>
         `;
       })
