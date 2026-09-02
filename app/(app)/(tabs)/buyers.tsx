@@ -7,7 +7,10 @@ import {
   RefreshControl,
   Alert,
   ActivityIndicator,
+  Modal,
+  ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -18,7 +21,6 @@ import {
   AppButton,
   AppTextInput,
   AppBadge,
-  AppModal,
 } from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
@@ -252,63 +254,87 @@ export default function BuyersScreen() {
         />
       )}
 
-      {/* Add Buyer Modal */}
-      <AppModal
+      {/* Add Buyer Full-Screen Modal Popup */}
+      <Modal
         visible={isAddModalOpen}
-        title={t.buyers.createBuyerTitle}
-        onClose={() => {
+        animationType="slide"
+        onRequestClose={() => {
           setIsAddModalOpen(false);
           resetForm();
         }}
+        statusBarTranslucent
       >
-        <AppTextInput
-          label={`${t.buyers.buyerName} *`}
-          placeholder="e.g. Mahavir Textiles"
-          value={name}
-          onChangeText={setName}
-          error={formErrors.name}
-          autoFocus
-        />
+        <SafeAreaView edges={['top', 'bottom']} style={styles.fullscreenModalContainer}>
+          <View style={styles.fullscreenModalHeader}>
+            <AppText variant="h3">{t.buyers.createBuyerTitle}</AppText>
+            <TouchableOpacity
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              onPress={() => {
+                setIsAddModalOpen(false);
+                resetForm();
+              }}
+            >
+              <Ionicons name="close" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
 
-        <AppTextInput
-          label={t.buyers.phoneNumber}
-          placeholder="10-digit mobile number"
-          value={phone}
-          onChangeText={setPhone}
-          keyboardType="phone-pad"
-          maxLength={10}
-          error={formErrors.phone}
-        />
+          <ScrollView
+            style={styles.fullscreenModalScroll}
+            contentContainerStyle={styles.fullscreenModalContent}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            showsVerticalScrollIndicator={false}
+          >
+            <AppTextInput
+              label={`${t.buyers.buyerName} *`}
+              placeholder="e.g. Mahavir Textiles"
+              value={name}
+              onChangeText={setName}
+              error={formErrors.name}
+              autoFocus
+            />
 
-        <AppTextInput
-          label={t.buyers.address}
-          placeholder="Shop address, market, or city"
-          value={address}
-          onChangeText={setAddress}
-          multiline
-          numberOfLines={3}
-          error={formErrors.address}
-        />
+            <AppTextInput
+              label={t.buyers.phoneNumber}
+              placeholder="10-digit mobile number"
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+              maxLength={10}
+              error={formErrors.phone}
+            />
 
-        <View style={styles.modalActionRow}>
-          <AppButton
-            title={t.common.cancel}
-            variant="outline"
-            onPress={() => {
-              setIsAddModalOpen(false);
-              resetForm();
-            }}
-            style={styles.modalBtn}
-          />
-          <AppButton
-            title={t.buyers.saveBuyer}
-            variant="primary"
-            loading={createBuyerMutation.isPending}
-            onPress={handleCreateBuyer}
-            style={styles.modalBtn}
-          />
-        </View>
-      </AppModal>
+            <AppTextInput
+              label={t.buyers.address}
+              placeholder="Shop address, market, or city"
+              value={address}
+              onChangeText={setAddress}
+              multiline
+              numberOfLines={3}
+              error={formErrors.address}
+            />
+
+            <View style={styles.fullscreenModalActionRow}>
+              <AppButton
+                title={t.common.cancel}
+                variant="outline"
+                onPress={() => {
+                  setIsAddModalOpen(false);
+                  resetForm();
+                }}
+                style={styles.modalBtn}
+              />
+              <AppButton
+                title={t.buyers.saveBuyer}
+                variant="primary"
+                loading={createBuyerMutation.isPending}
+                onPress={handleCreateBuyer}
+                style={styles.modalBtn}
+              />
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </AppScreenContainer>
   );
 }
@@ -416,29 +442,31 @@ const styles = StyleSheet.create({
     minWidth: 140,
     marginTop: spacing.sm,
   },
-  modalOverlay: {
+  fullscreenModalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: colors.background,
   },
-  modalContent: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: borderRadius.xl,
-    borderTopRightRadius: borderRadius.xl,
-    padding: spacing.lg,
-    maxHeight: '85%',
-  },
-  modalHeader: {
+  fullscreenModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    paddingHorizontal: spacing.screenPadding,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  modalActionRow: {
+  fullscreenModalScroll: {
+    flex: 1,
+  },
+  fullscreenModalContent: {
+    padding: spacing.screenPadding,
+    paddingBottom: 100,
+  },
+  fullscreenModalActionRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginTop: spacing.md,
-    paddingBottom: spacing.sm,
+    marginTop: spacing.lg,
   },
   modalBtn: {
     flex: 1,
