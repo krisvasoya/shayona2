@@ -25,10 +25,12 @@ import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
 import { borderRadius } from '@/src/theme/borderRadius';
 import { useBuyers, useCreateBuyer, buyerFormSchema, BuyerSummary } from '@/src/features/buyers';
+import { useLanguage } from '@/src/localization';
 import { formatCurrency, formatPhoneDisplay } from '@/src/utils';
 
 export default function BuyersScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
@@ -71,18 +73,20 @@ export default function BuyersScreen() {
     const res = await createBuyerMutation.mutateAsync(parseResult.data);
 
     if (res.error) {
-      Alert.alert('Error', res.error);
+      Alert.alert(t.common.error, res.error);
     } else {
       setIsAddModalOpen(false);
       resetForm();
     }
   };
 
-  // Total Baki Calculation
-  const totalOutstandingBaki = (buyers || []).reduce((acc, b) => acc + (b.total_baki || 0), 0);
+  const totalOutstandingBaki = (buyers || []).reduce(
+    (sum, b) => sum + Number(b.total_baki || 0),
+    0,
+  );
 
   const renderBuyerItem = ({ item }: { item: BuyerSummary }) => {
-    const hasBaki = item.total_baki > 0;
+    const hasBaki = Number(item.total_baki) > 0;
 
     return (
       <TouchableOpacity
@@ -92,7 +96,7 @@ export default function BuyersScreen() {
         <AppCard style={styles.buyerCard}>
           <View style={styles.cardHeader}>
             <View style={styles.avatarCircle}>
-              <AppText variant="bodyLargeBold" color={colors.info}>
+              <AppText variant="bodyLargeBold" color={colors.primary}>
                 {item.name.slice(0, 2).toUpperCase()}
               </AppText>
             </View>
@@ -102,7 +106,7 @@ export default function BuyersScreen() {
                 {item.name}
               </AppText>
               <AppText variant="caption" color={colors.textSecondary} style={styles.phoneText}>
-                {item.phone ? formatPhoneDisplay(item.phone) : 'No phone number'}
+                {item.phone ? formatPhoneDisplay(item.phone) : '—'}
               </AppText>
             </View>
 
@@ -115,7 +119,7 @@ export default function BuyersScreen() {
                 {formatCurrency(item.total_baki)}
               </AppText>
               <AppBadge
-                label={hasBaki ? 'Baki (Due)' : 'Clear'}
+                label={hasBaki ? t.invoices.filterBaki : t.invoices.fullyPaid}
                 variant={hasBaki ? 'danger' : 'success'}
               />
             </View>
@@ -128,18 +132,17 @@ export default function BuyersScreen() {
   return (
     <AppScreenContainer
       edges={['top']}
-      style={styles.container}
       header={
         <AppHeader
-          title="Buyers"
-          subtitle="Vyapari / Wholesale Directory"
-          showMenu={true}
+          title={t.buyers.title}
+          subtitle={t.buyers.subtitle}
           rightAction={
             <AppButton
-              title="+ Add Buyer"
+              title={t.buyers.addBuyer}
               size="sm"
               variant="primary"
               onPress={() => setIsAddModalOpen(true)}
+              style={styles.headerAddBtn}
             />
           }
         />
@@ -149,7 +152,7 @@ export default function BuyersScreen() {
       <AppCard style={styles.summaryBanner}>
         <View style={styles.summaryCol}>
           <AppText variant="caption" color={colors.textSecondary}>
-            TOTAL BUYERS
+            {t.buyers.title.toUpperCase()}
           </AppText>
           <AppText variant="h3">{buyers?.length || 0}</AppText>
         </View>
@@ -158,7 +161,7 @@ export default function BuyersScreen() {
 
         <View style={styles.summaryCol}>
           <AppText variant="caption" color={colors.textSecondary}>
-            TOTAL BAKI (DUE)
+            {t.buyers.totalBaki.toUpperCase()}
           </AppText>
           <AppText variant="h3" color={colors.baki}>
             {formatCurrency(totalOutstandingBaki)}
@@ -175,7 +178,7 @@ export default function BuyersScreen() {
           style={styles.searchIcon}
         />
         <AppTextInput
-          placeholder="Search by buyer name or phone..."
+          placeholder={t.buyers.searchPlaceholder}
           value={searchQuery}
           onChangeText={setSearchQuery}
           containerStyle={styles.searchInputContainer}
@@ -194,34 +197,29 @@ export default function BuyersScreen() {
         <View style={styles.centerState}>
           <ActivityIndicator size="large" color={colors.primary} />
           <AppText variant="body" color={colors.textSecondary} style={styles.stateText}>
-            Loading buyer accounts...
+            {t.common.loading}
           </AppText>
         </View>
       ) : isError ? (
         <View style={styles.centerState}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.danger} />
           <AppText variant="bodyLargeBold" color={colors.danger} style={styles.stateTitle}>
-            Failed to load buyers
+            {t.common.error}
           </AppText>
           <AppText variant="body" color={colors.textSecondary} style={styles.stateSubtitle}>
             {(error as Error)?.message || 'Please check your connection and try again.'}
           </AppText>
-          <AppButton title="Retry" onPress={() => refetch()} style={styles.retryBtn} />
+          <AppButton title={t.common.retry} onPress={() => refetch()} style={styles.retryBtn} />
         </View>
       ) : buyers && buyers.length === 0 ? (
         <View style={styles.centerState}>
           <Ionicons name="business-outline" size={56} color={colors.textMuted} />
           <AppText variant="bodyLargeBold" style={styles.stateTitle}>
-            {searchQuery ? 'No matching buyers found' : 'No buyers added yet'}
-          </AppText>
-          <AppText variant="body" color={colors.textSecondary} style={styles.stateSubtitle}>
-            {searchQuery
-              ? 'Try searching with a different name or mobile number.'
-              : 'Add your wholesale buyers and merchants to track bills and outstanding balances.'}
+            {t.buyers.noBuyers}
           </AppText>
           {!searchQuery && (
             <AppButton
-              title="+ Add First Buyer"
+              title={t.buyers.addBuyer}
               onPress={() => setIsAddModalOpen(true)}
               style={styles.retryBtn}
             />
@@ -254,7 +252,7 @@ export default function BuyersScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <AppText variant="h3">Add New Buyer</AppText>
+              <AppText variant="h3">{t.buyers.createBuyerTitle}</AppText>
               <TouchableOpacity
                 onPress={() => {
                   setIsAddModalOpen(false);
@@ -267,7 +265,7 @@ export default function BuyersScreen() {
 
             <ScrollView showsVerticalScrollIndicator={false}>
               <AppTextInput
-                label="Buyer / Business Name *"
+                label={`${t.buyers.buyerName} *`}
                 placeholder="e.g. Mahavir Textiles"
                 value={name}
                 onChangeText={setName}
@@ -276,19 +274,18 @@ export default function BuyersScreen() {
               />
 
               <AppTextInput
-                label="Mobile Number (Optional)"
+                label={t.buyers.phoneNumber}
                 placeholder="10-digit mobile number"
                 value={phone}
                 onChangeText={setPhone}
                 keyboardType="phone-pad"
                 maxLength={10}
                 error={formErrors.phone}
-                helperText="Indian 10-digit mobile number"
               />
 
               <AppTextInput
-                label="Address / Market (Optional)"
-                placeholder="Shop number, market, or city"
+                label={t.buyers.address}
+                placeholder="Shop address, market, or city"
                 value={address}
                 onChangeText={setAddress}
                 multiline
@@ -298,7 +295,7 @@ export default function BuyersScreen() {
 
               <View style={styles.modalActionRow}>
                 <AppButton
-                  title="Cancel"
+                  title={t.common.cancel}
                   variant="outline"
                   onPress={() => {
                     setIsAddModalOpen(false);
@@ -307,7 +304,7 @@ export default function BuyersScreen() {
                   style={styles.modalBtn}
                 />
                 <AppButton
-                  title="Save Buyer"
+                  title={t.buyers.saveBuyer}
                   variant="primary"
                   loading={createBuyerMutation.isPending}
                   onPress={handleCreateBuyer}
@@ -323,20 +320,9 @@ export default function BuyersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.background,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-    marginTop: spacing.sm,
-  },
   headerAddBtn: {
-    minHeight: 40,
-    paddingHorizontal: spacing.md,
+    minHeight: 36,
+    paddingHorizontal: spacing.sm,
   },
   summaryBanner: {
     flexDirection: 'row',
@@ -352,34 +338,36 @@ const styles = StyleSheet.create({
   summaryDivider: {
     width: 1,
     backgroundColor: colors.border,
-    marginHorizontal: spacing.sm,
+    marginVertical: spacing.xs,
   },
   searchContainer: {
-    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: spacing.md,
+    position: 'relative',
   },
   searchIcon: {
     position: 'absolute',
-    left: spacing.md,
-    top: 14,
+    left: spacing.sm,
     zIndex: 1,
   },
   searchInputContainer: {
+    flex: 1,
     marginBottom: 0,
   },
   searchInput: {
-    paddingLeft: spacing.xl + spacing.xs,
+    paddingLeft: spacing.xl,
     paddingRight: spacing.xl,
-    minHeight: 46,
+    backgroundColor: colors.surface,
   },
   clearSearchBtn: {
     position: 'absolute',
-    right: spacing.md,
-    top: 14,
+    right: spacing.sm,
     zIndex: 1,
+    padding: 4,
   },
   listContent: {
-    paddingBottom: spacing.xxl,
+    paddingBottom: 160,
   },
   buyerCard: {
     marginBottom: spacing.sm,
@@ -390,13 +378,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.accentSubtle,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: colors.surfaceSubtle,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   buyerInfo: {
     flex: 1,
@@ -408,16 +398,16 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   amountText: {
-    marginBottom: 4,
+    marginBottom: 2,
   },
   centerState: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: spacing.xxl,
     paddingHorizontal: spacing.lg,
   },
   stateText: {
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
   stateTitle: {
     marginTop: spacing.md,
@@ -426,10 +416,11 @@ const styles = StyleSheet.create({
   stateSubtitle: {
     marginTop: spacing.xs,
     textAlign: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   retryBtn: {
-    minWidth: 160,
+    minWidth: 140,
+    marginTop: spacing.sm,
   },
   modalOverlay: {
     flex: 1,
@@ -451,9 +442,9 @@ const styles = StyleSheet.create({
   },
   modalActionRow: {
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: spacing.sm,
     marginTop: spacing.md,
-    marginBottom: spacing.lg,
+    paddingBottom: spacing.sm,
   },
   modalBtn: {
     flex: 1,

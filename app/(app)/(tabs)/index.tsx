@@ -26,11 +26,13 @@ import { borderRadius } from '@/src/theme/borderRadius';
 import { formatCurrency } from '@/src/utils';
 import { useAuth } from '@/src/features/auth';
 import { useDashboard, DateFilter, getDateRange } from '@/src/features/dashboard';
+import { useLanguage } from '@/src/localization';
 import { InvoiceSummary } from '@/src/types/invoice';
 
 export default function DashboardScreen() {
   const router = useRouter();
   const { profile } = useAuth();
+  const { t } = useLanguage();
   const shopName = profile?.shop_name || 'Shayona Enterprise';
 
   const [activeFilter, setActiveFilter] = useState<DateFilter>('TODAY');
@@ -88,11 +90,11 @@ export default function DashboardScreen() {
   };
 
   const filtersList: { key: DateFilter; label: string }[] = [
-    { key: 'TODAY', label: 'Today' },
-    { key: 'THIS_WEEK', label: 'This Week' },
-    { key: 'THIS_MONTH', label: 'This Month' },
-    { key: 'THIS_YEAR', label: 'This Year' },
-    { key: 'CUSTOM', label: 'Custom' },
+    { key: 'TODAY', label: t.dashboard.today },
+    { key: 'THIS_WEEK', label: t.dashboard.thisWeek },
+    { key: 'THIS_MONTH', label: t.dashboard.thisMonth },
+    { key: 'THIS_YEAR', label: t.dashboard.thisYear },
+    { key: 'CUSTOM', label: t.dashboard.custom },
   ];
 
   return (
@@ -101,11 +103,11 @@ export default function DashboardScreen() {
       edges={['top']}
       header={
         <AppHeader
-          title="Dashboard"
+          title={t.dashboard.title}
           subtitle={shopName}
           rightAction={
             <AppButton
-              title="+ New Bill"
+              title={t.dashboard.newBill}
               size="sm"
               variant="primary"
               onPress={() => router.push('/(app)/invoices/create')}
@@ -153,7 +155,7 @@ export default function DashboardScreen() {
         <View style={styles.dateIndicatorRow}>
           <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
           <AppText variant="caption" color={colors.textSecondary}>
-            Period: {currentRange.startDate} to {currentRange.endDate}
+            {t.dashboard.period}: {currentRange.startDate} to {currentRange.endDate}
           </AppText>
         </View>
 
@@ -162,7 +164,7 @@ export default function DashboardScreen() {
           <View style={styles.centerLoadingState}>
             <ActivityIndicator size="large" color={colors.primary} />
             <AppText variant="body" color={colors.textSecondary} style={{ marginTop: spacing.sm }}>
-              Calculating ledger metrics...
+              {t.dashboard.calculating}
             </AppText>
           </View>
         ) : isError ? (
@@ -173,7 +175,7 @@ export default function DashboardScreen() {
               color={colors.danger}
               style={{ marginTop: spacing.xs }}
             >
-              Failed to load dashboard data
+              {t.dashboard.loadError}
             </AppText>
             <AppText
               variant="caption"
@@ -182,7 +184,7 @@ export default function DashboardScreen() {
             >
               {(error as Error)?.message || 'Please check your connection and try again.'}
             </AppText>
-            <AppButton title="Retry" size="sm" onPress={() => refetch()} />
+            <AppButton title={t.dashboard.retry} size="sm" onPress={() => refetch()} />
           </AppCard>
         ) : (
           <>
@@ -191,7 +193,7 @@ export default function DashboardScreen() {
               <View style={styles.totalSalesContent}>
                 <View>
                   <AppText variant="caption" color={colors.textSecondary}>
-                    TOTAL BILLED SALES
+                    {t.dashboard.totalBilledSales}
                   </AppText>
                   <AppText variant="h2" color={colors.primary}>
                     {formatCurrency(dashboardData?.totalBilledPaise || 0)}
@@ -200,13 +202,13 @@ export default function DashboardScreen() {
 
                 <View style={{ alignItems: 'flex-end' }}>
                   <AppBadge
-                    label={`${dashboardData?.totalInvoicesCount || 0} BILL${
-                      dashboardData?.totalInvoicesCount === 1 ? '' : 'S'
+                    label={`${dashboardData?.totalInvoicesCount || 0} ${
+                      dashboardData?.totalInvoicesCount === 1 ? t.dashboard.bill : t.dashboard.bills
                     }`}
                     variant="neutral"
                   />
                   <AppText variant="caption" color={colors.textSecondary} style={{ marginTop: 4 }}>
-                    in selected period
+                    {t.dashboard.inSelectedPeriod}
                   </AppText>
                 </View>
               </View>
@@ -218,7 +220,7 @@ export default function DashboardScreen() {
               <AppCard variant="jama" style={styles.metricCard}>
                 <View style={styles.metricHeader}>
                   <AppText variant="captionBold" color={colors.jama}>
-                    JAMA (RECEIVED)
+                    {t.dashboard.jamaReceived}
                   </AppText>
                   <Ionicons name="arrow-down-circle" size={18} color={colors.jama} />
                 </View>
@@ -226,8 +228,10 @@ export default function DashboardScreen() {
                   {formatCurrency(dashboardData?.totalJamaPaise || 0)}
                 </AppText>
                 <AppText variant="caption" color={colors.textSecondary}>
-                  {dashboardData?.paidTransactionsCount || 0} transaction
-                  {dashboardData?.paidTransactionsCount === 1 ? '' : 's'}
+                  {dashboardData?.paidTransactionsCount || 0}{' '}
+                  {dashboardData?.paidTransactionsCount === 1
+                    ? t.dashboard.transaction
+                    : t.dashboard.transactions}
                 </AppText>
               </AppCard>
 
@@ -235,7 +239,7 @@ export default function DashboardScreen() {
               <AppCard variant="baki" style={styles.metricCard}>
                 <View style={styles.metricHeader}>
                   <AppText variant="captionBold" color={colors.baki}>
-                    BAKI (PENDING)
+                    {t.dashboard.bakiPending}
                   </AppText>
                   <Ionicons name="alert-circle" size={18} color={colors.baki} />
                 </View>
@@ -243,7 +247,7 @@ export default function DashboardScreen() {
                   {formatCurrency(dashboardData?.totalBakiPaise || 0)}
                 </AppText>
                 <AppText variant="caption" color={colors.textSecondary}>
-                  {dashboardData?.pendingInvoicesCount || 0} pending
+                  {dashboardData?.pendingInvoicesCount || 0} {t.dashboard.pending}
                 </AppText>
               </AppCard>
             </View>
@@ -251,17 +255,17 @@ export default function DashboardScreen() {
             {/* Quick Actions */}
             <AppCard style={styles.quickActionCard}>
               <AppText variant="bodyLargeBold" style={styles.sectionTitle}>
-                Quick Actions
+                {t.dashboard.quickActions}
               </AppText>
               <View style={styles.actionButtonsRow}>
                 <AppButton
-                  title="Create Invoice"
+                  title={t.dashboard.createInvoice}
                   variant="primary"
                   style={styles.actionBtn}
                   onPress={() => router.push('/(app)/invoices/create')}
                 />
                 <AppButton
-                  title="View Invoices"
+                  title={t.dashboard.viewInvoices}
                   variant="secondary"
                   style={styles.actionBtn}
                   onPress={() => router.push('/(app)/(tabs)/invoices')}
@@ -272,10 +276,10 @@ export default function DashboardScreen() {
             {/* Recent Bills Section */}
             <AppCard style={styles.recentBillsCard}>
               <View style={styles.sectionHeaderRow}>
-                <AppText variant="bodyLargeBold">Recent Bills</AppText>
+                <AppText variant="bodyLargeBold">{t.dashboard.recentBills}</AppText>
                 <TouchableOpacity onPress={() => router.push('/(app)/(tabs)/invoices')}>
                   <AppText variant="captionBold" color={colors.primary}>
-                    View All
+                    {t.dashboard.viewAll}
                   </AppText>
                 </TouchableOpacity>
               </View>
@@ -288,10 +292,10 @@ export default function DashboardScreen() {
                     color={colors.textSecondary}
                     style={styles.emptyText}
                   >
-                    No invoices recorded for this period.
+                    {t.dashboard.noInvoices}
                   </AppText>
                   <AppButton
-                    title="+ Create First Bill"
+                    title={t.dashboard.createFirstBill}
                     variant="outline"
                     size="sm"
                     onPress={() => router.push('/(app)/invoices/create')}
@@ -311,7 +315,11 @@ export default function DashboardScreen() {
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <AppText variant="bodyBold">#{inv.invoice_number}</AppText>
                           <AppBadge
-                            label={inv.party_type}
+                            label={
+                              inv.party_type === 'CUSTOMER'
+                                ? t.invoices.filterCustomers
+                                : t.invoices.filterBuyers
+                            }
                             variant={inv.party_type === 'CUSTOMER' ? 'neutral' : 'info'}
                             style={{ paddingVertical: 1, paddingHorizontal: 4 }}
                           />
@@ -335,8 +343,8 @@ export default function DashboardScreen() {
                         <AppBadge
                           label={
                             isPaid
-                              ? 'PAID'
-                              : `Baki: ${formatCurrency(Number(inv.remaining_amount))}`
+                              ? t.invoices.filterPaid
+                              : `${t.invoices.filterBaki}: ${formatCurrency(Number(inv.remaining_amount))}`
                           }
                           variant={isPaid ? 'success' : 'danger'}
                         />
@@ -360,21 +368,21 @@ export default function DashboardScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <AppText variant="h3">Select Custom Date Range</AppText>
+              <AppText variant="h3">{t.dashboard.customRangeTitle}</AppText>
               <TouchableOpacity onPress={() => setIsCustomModalOpen(false)}>
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
 
             <AppTextInput
-              label="From Date (YYYY-MM-DD)"
+              label={t.dashboard.fromDate}
               value={tempFrom}
               onChangeText={setTempFrom}
               placeholder="2026-09-01"
             />
 
             <AppTextInput
-              label="To Date (YYYY-MM-DD)"
+              label={t.dashboard.toDate}
               value={tempTo}
               onChangeText={setTempTo}
               placeholder="2026-09-30"
@@ -382,13 +390,13 @@ export default function DashboardScreen() {
 
             <View style={styles.modalActionsRow}>
               <AppButton
-                title="Cancel"
+                title={t.dashboard.cancel}
                 variant="outline"
                 style={{ flex: 1 }}
                 onPress={() => setIsCustomModalOpen(false)}
               />
               <AppButton
-                title="Apply Filter"
+                title={t.dashboard.applyFilter}
                 variant="primary"
                 style={{ flex: 1 }}
                 onPress={handleApplyCustomRange}

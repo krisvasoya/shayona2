@@ -4,21 +4,35 @@ import { Ionicons } from '@expo/vector-icons';
 import { AppScreenContainer, AppHeader, AppText, AppCard, AppBadge } from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
+import { borderRadius } from '@/src/theme/borderRadius';
 import { useAuth } from '@/src/features/auth';
+import { useLanguage, SupportedLanguage } from '@/src/localization';
 import { formatPhoneDisplay } from '@/src/utils/phone';
 
 export default function SettingsScreen() {
   const { user, profile, signOut, isLoading } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [savingLang, setSavingLang] = useState(false);
+
+  const handleLanguageChange = async (newLang: SupportedLanguage) => {
+    if (newLang === language) return;
+    try {
+      setSavingLang(true);
+      await setLanguage(newLang, user?.id);
+    } finally {
+      setSavingLang(false);
+    }
+  };
 
   const handleLogoutPress = () => {
-    Alert.alert('Confirm Logout', 'Are you sure you want to logout from your account?', [
+    Alert.alert(t.settings.confirmLogoutTitle, t.settings.confirmLogoutMessage, [
       {
-        text: 'Cancel',
+        text: t.common.cancel,
         style: 'cancel',
       },
       {
-        text: 'Logout',
+        text: t.settings.signOut,
         style: 'destructive',
         onPress: async () => {
           setLoggingOut(true);
@@ -42,12 +56,12 @@ export default function SettingsScreen() {
     <AppScreenContainer
       scrollable
       edges={['top']}
-      header={<AppHeader title="Settings" subtitle="App & Business Preferences" showBack={true} />}
+      header={<AppHeader title={t.settings.title} subtitle={t.settings.subtitle} showBack={true} />}
     >
       {/* Business Profile Card */}
       <AppCard>
         <AppText variant="h4" style={styles.cardSectionTitle}>
-          Business Profile
+          {t.settings.businessProfile}
         </AppText>
         <View style={styles.profileRow}>
           <View style={styles.profileAvatar}>
@@ -65,46 +79,81 @@ export default function SettingsScreen() {
               </AppText>
             ) : null}
           </View>
-          <AppBadge label="Active" variant="success" />
+          <AppBadge label={t.common.active} variant="success" />
+        </View>
+      </AppCard>
+
+      {/* Language Preferences Card with Radio Selection */}
+      <AppCard>
+        <AppText variant="h4" style={styles.cardSectionTitle}>
+          {t.settings.languagePreferences}
+        </AppText>
+
+        <View style={styles.languageOptionsContainer}>
+          {/* English Option */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            disabled={savingLang}
+            style={[styles.langChoiceCard, language === 'en' && styles.langChoiceCardSelected]}
+            onPress={() => handleLanguageChange('en')}
+          >
+            <View style={styles.langChoiceLeft}>
+              <View style={[styles.radioCircle, language === 'en' && styles.radioCircleSelected]}>
+                {language === 'en' && <View style={styles.radioInner} />}
+              </View>
+              <View style={{ marginLeft: spacing.sm }}>
+                <AppText variant="bodyLargeBold">English</AppText>
+                <AppText variant="caption" color={colors.textSecondary}>
+                  Default App Language
+                </AppText>
+              </View>
+            </View>
+            {language === 'en' && <AppBadge label="Active" variant="success" />}
+          </TouchableOpacity>
+
+          {/* Gujarati Option */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            disabled={savingLang}
+            style={[styles.langChoiceCard, language === 'gu' && styles.langChoiceCardSelected]}
+            onPress={() => handleLanguageChange('gu')}
+          >
+            <View style={styles.langChoiceLeft}>
+              <View style={[styles.radioCircle, language === 'gu' && styles.radioCircleSelected]}>
+                {language === 'gu' && <View style={styles.radioInner} />}
+              </View>
+              <View style={{ marginLeft: spacing.sm }}>
+                <AppText variant="bodyLargeBold">ગુજરાતી (Gujarati)</AppText>
+                <AppText variant="caption" color={colors.textSecondary}>
+                  ગુજરાતી ભાષા પસંદ કરો
+                </AppText>
+              </View>
+            </View>
+            {language === 'gu' && <AppBadge label="સક્રિય" variant="success" />}
+          </TouchableOpacity>
         </View>
       </AppCard>
 
       {/* Account & Security Card */}
       <AppCard>
         <AppText variant="h4" style={styles.cardSectionTitle}>
-          Account & Security
+          {t.settings.accountSecurity}
         </AppText>
         <View style={styles.settingRow}>
           <View>
-            <AppText variant="bodyMedium">Sign-in Method</AppText>
+            <AppText variant="bodyMedium">{t.settings.signInMethod}</AppText>
             <AppText variant="caption" color={colors.textSecondary}>
-              Primary identity provider
+              {t.settings.primaryIdentity}
             </AppText>
           </View>
           <AppBadge label={authProvider} variant="info" />
         </View>
       </AppCard>
 
-      {/* Language Preferences */}
-      <AppCard>
-        <AppText variant="h4" style={styles.cardSectionTitle}>
-          Language / ભાષા
-        </AppText>
-        <View style={styles.settingRow}>
-          <View>
-            <AppText variant="bodyMedium">Application Language</AppText>
-            <AppText variant="caption" color={colors.textSecondary}>
-              English & ગુજરાતી supported
-            </AppText>
-          </View>
-          <AppBadge label="English" variant="neutral" />
-        </View>
-      </AppCard>
-
       {/* Sign Out Card */}
       <AppCard>
         <AppText variant="h4" style={styles.cardSectionTitle}>
-          Session
+          {t.settings.session}
         </AppText>
         <TouchableOpacity
           style={styles.logoutRow}
@@ -118,7 +167,7 @@ export default function SettingsScreen() {
             <Ionicons name="log-out-outline" size={22} color={colors.danger} />
           )}
           <AppText variant="bodyLargeBold" color={colors.danger} style={styles.logoutText}>
-            {loggingOut ? 'Logging out...' : 'Sign Out'}
+            {loggingOut ? t.settings.loggingOut : t.settings.signOut}
           </AppText>
         </TouchableOpacity>
       </AppCard>
@@ -148,6 +197,45 @@ const styles = StyleSheet.create({
   },
   profileDetails: {
     flex: 1,
+  },
+  languageOptionsContainer: {
+    gap: spacing.sm,
+  },
+  langChoiceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceSubtle,
+  },
+  langChoiceCardSelected: {
+    borderColor: colors.primary,
+    backgroundColor: '#EEF2FF',
+  },
+  langChoiceLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  radioCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: colors.textMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioCircleSelected: {
+    borderColor: colors.primary,
+  },
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.primary,
   },
   settingRow: {
     flexDirection: 'row',

@@ -31,6 +31,7 @@ import {
 } from '@/src/features/invoices';
 import { useCustomers } from '@/src/features/customers';
 import { useBuyers } from '@/src/features/buyers';
+import { useLanguage } from '@/src/localization';
 import { PartyType } from '@/src/types/database';
 import { formatCurrency, paiseToRupees } from '@/src/utils';
 
@@ -43,6 +44,7 @@ interface LineItemState {
 
 export default function CreateInvoiceScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const params = useLocalSearchParams<{
     id?: string;
     partyType?: PartyType;
@@ -98,33 +100,43 @@ export default function CreateInvoiceScreen() {
       setPartyId(existingInvoice.party_id);
       setPartyName(existingInvoice.party_name);
       setInvoiceDate(existingInvoice.invoice_date);
-      setPaidAmountRupees(String(paiseToRupees(Number(existingInvoice.paid_amount))));
+      setPaidAmountRupees(paiseToRupees(existingInvoice.paid_amount).toString());
       setNotes(existingInvoice.notes || '');
 
       if (existingInvoice.items && existingInvoice.items.length > 0) {
         setItems(
-          existingInvoice.items.map((it, index) => ({
-            id: String(index + 1),
-            item_name: it.item_name,
-            quantity: String(it.quantity),
-            rate_rupees: String(paiseToRupees(Number(it.rate))),
+          existingInvoice.items.map(item => ({
+            id: item.id,
+            item_name: item.item_name,
+            quantity: item.quantity.toString(),
+            rate_rupees: paiseToRupees(item.rate).toString(),
           })),
         );
       }
     }
   }, [isEditing, existingInvoice]);
 
-  // Line item helpers
+  // Calculations
+  const totalBillRupees = items.reduce((sum, item) => {
+    const qty = parseFloat(item.quantity) || 0;
+    const rate = parseFloat(item.rate_rupees) || 0;
+    return sum + qty * rate;
+  }, 0);
+
+  const parsedPaidRupees = parseFloat(paidAmountRupees) || 0;
+  const remainingDueRupees = Math.max(0, totalBillRupees - parsedPaidRupees);
+
+  // Line items management
   const handleAddItem = () => {
     setItems(prev => [
       ...prev,
-      { id: String(Date.now()), item_name: '', quantity: '1', rate_rupees: '' },
+      { id: Date.now().toString(), item_name: '', quantity: '1', rate_rupees: '' },
     ]);
   };
 
   const handleRemoveItem = (index: number) => {
     if (items.length <= 1) {
-      Alert.alert('Cannot Remove', 'At least one line item is required on the bill.');
+      Alert.alert(t.common.error, t.createInvoice.pleaseAddItems);
       return;
     }
     setItems(prev => prev.filter((_, i) => i !== index));
@@ -132,59 +144,54 @@ export default function CreateInvoiceScreen() {
 
   const handleItemChange = (index: number, field: keyof LineItemState, value: string) => {
     setItems(prev => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
-      return updated;
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
     });
   };
 
-  // Real-time calculations (in Rupees)
-  const totalBillRupees = items.reduce((sum, it) => {
-    const qty = parseFloat(it.quantity) || 0;
-    const rate = parseFloat(it.rate_rupees) || 0;
-    return sum + qty * rate;
-  }, 0);
-
-  const numericPaidRupees = parseFloat(paidAmountRupees) || 0;
-  const remainingDueRupees = Math.max(0, totalBillRupees - numericPaidRupees);
-
-  // Quick action: Set full paid
   const handleSetFullPaid = () => {
-    setPaidAmountRupees(String(totalBillRupees.toFixed(2)));
+    setPaidAmountRupees(totalBillRupees.toFixed(2));
   };
 
   // Submit invoice
   const handleSaveInvoice = async () => {
     setFormErrors({});
 
-    const formattedItems = items.map(it => ({
-      item_name: it.item_name.trim(),
-      quantity: parseFloat(it.quantity) || 0,
-      rate_rupees: parseFloat(it.rate_rupees) || 0,
-    }));
+    const formattedItems = items
+      .filter(item => item.item_name.trim() !== '')
+      .map(item => ({
+        item_name: item.item_name.trim(),
+        quantity: parseFloat(item.quantity) || 1,
+        rate_rupees: parseFloat(item.rate_rupees) || 0,
+      }));
 
     const parseResult = invoiceFormSchema.safeParse({
-      invoice_number: invoiceNumber,
+      invoice_number: invoiceNumber.trim(),
       party_type: partyType,
       party_id: partyId,
-      party_name: partyName,
-      invoice_date: invoiceDate,
+      party_name: partyName.trim(),
+      invoice_date: invoiceDate.trim(),
       items: formattedItems,
-      paid_amount_rupees: numericPaidRupees,
-      notes: notes || undefined,
+      paid_amount_rupees: parsedPaidRupees,
+      notes: notes.trim() || undefined,
     });
 
     if (!parseResult.success) {
       const errMap: Record<string, string> = {};
-      parseResult.error.issues.forEach(issue => {
-        const path = issue.path.join('.');
-        errMap[path] = issue.message;
+      parseResult.error.errors.forEach(err => {
+        if (err.path[0]) errMap[err.path[0] as string] = err.message;
       });
       setFormErrors(errMap);
       Alert.alert(
-        'Validation Error',
-        parseResult.error.issues[0]?.message || 'Please check the form inputs.',
+        t.createInvoice.validationError,
+        parseResult.error.errors[0]?.message || 'Invalid form data.',
       );
+      return;
+    }
+
+    if (parsedPaidRupees > totalBillRupees && totalBillRupees > 0) {
+      Alert.alert(t.createInvoice.validationError, t.createInvoice.paidExceedsTotal);
       return;
     }
 
@@ -194,47 +201,42 @@ export default function CreateInvoiceScreen() {
         data: parseResult.data,
       });
 
-      if (res.error) {
-        Alert.alert('Error', res.error);
+      if (res.data) {
+        router.back();
       } else {
-        Alert.alert('Success', 'Invoice updated successfully.', [
-          { text: 'OK', onPress: () => router.back() },
-        ]);
+        Alert.alert(t.common.error, res.error || 'Failed to update invoice.');
       }
     } else {
       const res = await createInvoiceMutation.mutateAsync(parseResult.data);
 
-      if (res.error) {
-        Alert.alert('Error', res.error);
+      if (res.data) {
+        router.replace(`/(app)/invoices/${res.data.id}` as any);
       } else {
-        Alert.alert('Success', `Invoice #${invoiceNumber} created successfully.`, [
-          { text: 'OK', onPress: () => router.back() },
-        ]);
+        Alert.alert(t.common.error, res.error || 'Failed to create invoice.');
       }
     }
   };
 
-  // Party selector list
-  const partyList = partyType === 'CUSTOMER' ? customers || [] : buyers || [];
-  const filteredParties = partyList.filter(
-    p =>
-      p.name.toLowerCase().includes(partySearch.toLowerCase()) ||
-      (p.phone && p.phone.includes(partySearch)),
+  const availableParties = partyType === 'CUSTOMER' ? customers || [] : buyers || [];
+  const filteredParties = availableParties.filter(p =>
+    p.name.toLowerCase().includes(partySearch.toLowerCase()),
   );
 
   if (isEditing && isLoadingInvoice) {
     return (
-      <AppScreenContainer edges={['top']} style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <AppText variant="body" color={colors.textSecondary} style={{ marginTop: spacing.md }}>
-          Loading invoice details...
-        </AppText>
+      <AppScreenContainer edges={['top', 'bottom']}>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <AppText variant="body" color={colors.textSecondary} style={{ marginTop: spacing.sm }}>
+            {t.common.loading}
+          </AppText>
+        </View>
       </AppScreenContainer>
     );
   }
 
   return (
-    <AppScreenContainer edges={['top']} style={styles.container}>
+    <AppScreenContainer edges={['top', 'bottom']}>
       {/* Top Header */}
       <View style={styles.navHeader}>
         <TouchableOpacity
@@ -242,11 +244,11 @@ export default function CreateInvoiceScreen() {
           style={styles.backButton}
           activeOpacity={0.7}
         >
-          <Ionicons name="close" size={26} color={colors.textPrimary} />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
 
         <AppText variant="h3" style={styles.headerTitle}>
-          {isEditing ? `Edit Bill #${invoiceNumber}` : 'Create New Bill'}
+          {isEditing ? t.createInvoice.titleEdit : t.createInvoice.titleNew}
         </AppText>
 
         <View style={{ width: 26 }} />
@@ -256,13 +258,13 @@ export default function CreateInvoiceScreen() {
         {/* Section 1: Bill Header & Party */}
         <AppCard style={styles.card}>
           <AppText variant="bodyLargeBold" style={styles.sectionHeader}>
-            1. Bill & Party Details
+            1. {t.createInvoice.partyDetails}
           </AppText>
 
           <View style={styles.rowTwoCols}>
             <View style={{ flex: 1 }}>
               <AppTextInput
-                label="Invoice Number *"
+                label={`${t.createInvoice.invoiceNumber} *`}
                 value={invoiceNumber}
                 onChangeText={setInvoiceNumber}
                 placeholder="e.g. INV-0001"
@@ -273,7 +275,7 @@ export default function CreateInvoiceScreen() {
 
             <View style={{ flex: 1 }}>
               <AppTextInput
-                label="Bill Date (YYYY-MM-DD) *"
+                label={`${t.createInvoice.invoiceDate} *`}
                 value={invoiceDate}
                 onChangeText={setInvoiceDate}
                 placeholder="2026-09-02"
@@ -288,7 +290,7 @@ export default function CreateInvoiceScreen() {
             color={colors.textSecondary}
             style={{ marginBottom: spacing.xs }}
           >
-            PARTY TYPE *
+            {t.createInvoice.partyType.toUpperCase()} *
           </AppText>
           <View style={styles.toggleRow}>
             <TouchableOpacity
@@ -305,7 +307,7 @@ export default function CreateInvoiceScreen() {
                 variant="bodyBold"
                 color={partyType === 'CUSTOMER' ? colors.textInverse : colors.textSecondary}
               >
-                Customer (Grahak)
+                {t.createInvoice.customer}
               </AppText>
             </TouchableOpacity>
 
@@ -323,7 +325,7 @@ export default function CreateInvoiceScreen() {
                 variant="bodyBold"
                 color={partyType === 'BUYER' ? colors.textInverse : colors.textSecondary}
               >
-                Buyer (Vyapari)
+                {t.createInvoice.buyer}
               </AppText>
             </TouchableOpacity>
           </View>
@@ -336,13 +338,13 @@ export default function CreateInvoiceScreen() {
           >
             <View style={{ flex: 1 }}>
               <AppText variant="caption" color={colors.textSecondary}>
-                SELECT {partyType} *
+                {t.createInvoice.selectParty.toUpperCase()} ({partyType}) *
               </AppText>
               <AppText
                 variant="bodyLargeBold"
                 color={partyName ? colors.textPrimary : colors.textMuted}
               >
-                {partyName || `Tap to choose ${partyType.toLowerCase()}...`}
+                {partyName || `${t.createInvoice.selectParty}...`}
               </AppText>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
@@ -358,11 +360,11 @@ export default function CreateInvoiceScreen() {
         <AppCard style={styles.card}>
           <View style={styles.sectionHeaderRow}>
             <AppText variant="bodyLargeBold" style={styles.sectionHeader}>
-              2. Items / Products ({items.length})
+              2. {t.createInvoice.itemsTitle} ({items.length})
             </AppText>
 
             <AppButton
-              title="+ Add Item"
+              title={t.createInvoice.addItem}
               variant="outline"
               onPress={handleAddItem}
               style={styles.smallAddBtn}
@@ -378,7 +380,7 @@ export default function CreateInvoiceScreen() {
               <View key={item.id} style={styles.itemBox}>
                 <View style={styles.itemBoxHeader}>
                   <AppText variant="bodyBold" color={colors.primary}>
-                    Item #{index + 1}
+                    #{index + 1}
                   </AppText>
                   {items.length > 1 && (
                     <TouchableOpacity onPress={() => handleRemoveItem(index)}>
@@ -388,8 +390,8 @@ export default function CreateInvoiceScreen() {
                 </View>
 
                 <AppTextInput
-                  label="Item Name / Description *"
-                  placeholder="e.g. Cotton Shirt Material"
+                  label={`${t.createInvoice.itemNamePlaceholder} *`}
+                  placeholder="e.g. Cotton Fabric 40m"
                   value={item.item_name}
                   onChangeText={val => handleItemChange(index, 'item_name', val)}
                 />
@@ -397,7 +399,7 @@ export default function CreateInvoiceScreen() {
                 <View style={styles.rowTwoCols}>
                   <View style={{ flex: 1 }}>
                     <AppTextInput
-                      label="Quantity *"
+                      label={`${t.createInvoice.qtyPlaceholder} *`}
                       placeholder="1"
                       value={item.quantity}
                       onChangeText={val => handleItemChange(index, 'quantity', val)}
@@ -407,7 +409,7 @@ export default function CreateInvoiceScreen() {
 
                   <View style={{ flex: 1 }}>
                     <AppTextInput
-                      label="Rate (₹) *"
+                      label={`${t.createInvoice.ratePlaceholder} *`}
                       placeholder="0.00"
                       value={item.rate_rupees}
                       onChangeText={val => handleItemChange(index, 'rate_rupees', val)}
@@ -418,7 +420,7 @@ export default function CreateInvoiceScreen() {
 
                 <View style={styles.itemTotalRow}>
                   <AppText variant="caption" color={colors.textSecondary}>
-                    Item Subtotal:
+                    {t.createInvoice.amountCalculated}:
                   </AppText>
                   <AppText variant="bodyLargeBold">
                     {formatCurrency(Math.round(itemTotal * 100))}
@@ -432,11 +434,11 @@ export default function CreateInvoiceScreen() {
         {/* Section 3: Calculation & Payment (Jama/Baki) */}
         <AppCard style={styles.card}>
           <AppText variant="bodyLargeBold" style={styles.sectionHeader}>
-            3. Payment & Ledger
+            3. {t.createInvoice.paymentLedger}
           </AppText>
 
           <View style={styles.calcSummaryRow}>
-            <AppText variant="bodyLargeBold">Total Bill Amount</AppText>
+            <AppText variant="bodyLargeBold">{t.createInvoice.totalBillAmount}</AppText>
             <AppText variant="h2" color={colors.primary}>
               {formatCurrency(Math.round(totalBillRupees * 100))}
             </AppText>
@@ -452,11 +454,11 @@ export default function CreateInvoiceScreen() {
               }}
             >
               <AppText variant="caption" color={colors.textSecondary}>
-                PAID AMOUNT / JAMA (₹)
+                {t.createInvoice.paidJama}
               </AppText>
               <TouchableOpacity onPress={handleSetFullPaid}>
                 <AppText variant="caption" color={colors.textLink}>
-                  Set Full Paid
+                  {t.invoices.filterPaid} (100%)
                 </AppText>
               </TouchableOpacity>
             </View>
@@ -472,7 +474,7 @@ export default function CreateInvoiceScreen() {
           <View style={styles.bakiBanner}>
             <View>
               <AppText variant="caption" color={colors.textSecondary}>
-                REMAINING BALANCE (BAKI)
+                {t.createInvoice.remainingBaki}
               </AppText>
               <AppText variant="h3" color={remainingDueRupees > 0 ? colors.baki : colors.jama}>
                 {formatCurrency(Math.round(remainingDueRupees * 100))}
@@ -480,14 +482,14 @@ export default function CreateInvoiceScreen() {
             </View>
 
             <AppBadge
-              label={remainingDueRupees > 0 ? 'PENDING BAKI' : 'FULLY PAID'}
+              label={remainingDueRupees > 0 ? t.invoices.filterBaki : t.invoices.filterPaid}
               variant={remainingDueRupees > 0 ? 'danger' : 'success'}
             />
           </View>
 
           <AppTextInput
-            label="Notes / Terms (Optional)"
-            placeholder="e.g. Payment due in 15 days"
+            label={t.createInvoice.notesOptional}
+            placeholder={t.createInvoice.notesPlaceholder}
             value={notes}
             onChangeText={setNotes}
             multiline
@@ -497,7 +499,7 @@ export default function CreateInvoiceScreen() {
 
         {/* Submit Action Button */}
         <AppButton
-          title={isEditing ? 'Update Invoice' : 'Save & Create Invoice'}
+          title={isEditing ? t.createInvoice.updateBill : t.createInvoice.saveBill}
           variant="primary"
           loading={createInvoiceMutation.isPending || updateInvoiceMutation.isPending}
           onPress={handleSaveInvoice}
@@ -515,14 +517,16 @@ export default function CreateInvoiceScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <AppText variant="h3">Select {partyType}</AppText>
+              <AppText variant="h3">
+                {t.createInvoice.selectParty} ({partyType})
+              </AppText>
               <TouchableOpacity onPress={() => setIsPartyModalOpen(false)}>
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
 
             <AppTextInput
-              placeholder={`Search ${partyType.toLowerCase()} by name or phone...`}
+              placeholder={`${t.createInvoice.selectParty}...`}
               value={partySearch}
               onChangeText={setPartySearch}
             />
@@ -551,13 +555,6 @@ export default function CreateInvoiceScreen() {
                   <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
                 </TouchableOpacity>
               )}
-              ListEmptyComponent={
-                <View style={{ padding: spacing.lg, alignItems: 'center' }}>
-                  <AppText variant="body" color={colors.textSecondary}>
-                    No {partyType.toLowerCase()} records found.
-                  </AppText>
-                </View>
-              }
             />
           </View>
         </View>
@@ -567,16 +564,6 @@ export default function CreateInvoiceScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.background,
-  },
-  centerContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
-  },
   navHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -599,7 +586,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   sectionHeader: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -617,37 +604,40 @@ const styles = StyleSheet.create({
   },
   toggleRow: {
     flexDirection: 'row',
-    backgroundColor: colors.surfaceSubtle,
-    borderRadius: borderRadius.md,
-    padding: 3,
+    gap: spacing.sm,
     marginBottom: spacing.md,
   },
   toggleBtn: {
     flex: 1,
     paddingVertical: spacing.sm,
     alignItems: 'center',
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   toggleBtnActive: {
     backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   partySelectBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: spacing.md,
-    backgroundColor: colors.surfaceSubtle,
     borderRadius: borderRadius.md,
     borderWidth: 1,
     borderColor: colors.border,
+    backgroundColor: colors.surfaceSubtle,
+    marginTop: spacing.xs,
   },
   itemBox: {
-    backgroundColor: colors.surfaceSubtle,
     padding: spacing.sm,
     borderRadius: borderRadius.md,
-    marginBottom: spacing.sm,
+    backgroundColor: colors.surfaceSubtle,
     borderWidth: 1,
     borderColor: colors.borderLight,
+    marginBottom: spacing.sm,
   },
   itemBoxHeader: {
     flexDirection: 'row',
@@ -659,27 +649,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: spacing.xs,
     paddingTop: spacing.xs,
     borderTopWidth: 0.5,
-    borderTopColor: colors.border,
+    borderTopColor: colors.borderLight,
+    marginTop: spacing.xs,
   },
   calcSummaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: spacing.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    marginBottom: spacing.sm,
   },
   bakiBanner: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: colors.surfaceSubtle,
     padding: spacing.md,
     borderRadius: borderRadius.md,
-    marginVertical: spacing.md,
+    backgroundColor: colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.md,
   },
   submitBtn: {
     marginTop: spacing.sm,
@@ -709,9 +699,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: spacing.md,
     borderBottomWidth: 0.5,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderLight,
   },
   partyOptionInfo: {
     flex: 1,
+  },
+  centerContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
   },
 });

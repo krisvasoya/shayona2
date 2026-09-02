@@ -22,6 +22,7 @@ import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
 import { borderRadius } from '@/src/theme/borderRadius';
 import { useInvoices, InvoiceSummary } from '@/src/features/invoices';
+import { useLanguage } from '@/src/localization';
 import { PartyType } from '@/src/types/database';
 import { formatCurrency } from '@/src/utils';
 
@@ -29,6 +30,7 @@ type FilterTab = 'ALL' | 'CUSTOMERS' | 'BUYERS' | 'BAKI' | 'PAID';
 
 export default function InvoicesScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<FilterTab>('ALL');
 
@@ -72,40 +74,78 @@ export default function InvoicesScreen() {
         onPress={() => router.push(`/(app)/invoices/${item.id}` as any)}
       >
         <AppCard style={styles.invoiceCard}>
-          <View style={styles.cardHeaderRow}>
-            <View style={{ flex: 1 }}>
-              <View style={styles.invoiceNumRow}>
-                <AppText variant="bodyLargeBold">Bill #{item.invoice_number}</AppText>
-                <AppBadge
-                  label={item.party_type}
-                  variant={item.party_type === 'CUSTOMER' ? 'neutral' : 'info'}
-                  style={styles.partyBadge}
-                />
-              </View>
-
-              <AppText variant="bodyBold" color={colors.textPrimary} numberOfLines={1}>
-                {item.party_name}
-              </AppText>
-
-              <AppText variant="caption" color={colors.textSecondary} style={{ marginTop: 2 }}>
-                {new Date(item.invoice_date).toLocaleDateString('en-IN', {
-                  day: 'numeric',
-                  month: 'short',
-                  year: 'numeric',
-                })}{' '}
-                • {item.items_count} item{item.items_count === 1 ? '' : 's'}
-              </AppText>
+          {/* Card Header: Invoice # & Date */}
+          <View style={styles.cardHeader}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <AppText variant="bodyLargeBold">#{item.invoice_number}</AppText>
+              <AppBadge
+                label={
+                  item.party_type === 'CUSTOMER' ? t.invoices.customerBill : t.invoices.buyerBill
+                }
+                variant={item.party_type === 'CUSTOMER' ? 'neutral' : 'info'}
+              />
             </View>
 
-            <View style={styles.cardAmountCol}>
-              <AppText variant="bodyLargeBold" style={styles.totalAmountText}>
-                {formatCurrency(Number(item.total_amount))}
-              </AppText>
+            <AppText variant="caption" color={colors.textSecondary}>
+              {new Date(item.invoice_date).toLocaleDateString('en-IN', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+              })}
+            </AppText>
+          </View>
 
+          {/* Party Name */}
+          <View style={styles.partyRow}>
+            <Ionicons
+              name={item.party_type === 'CUSTOMER' ? 'person-outline' : 'business-outline'}
+              size={16}
+              color={colors.textSecondary}
+              style={{ marginRight: 6 }}
+            />
+            <AppText variant="bodyLargeBold" numberOfLines={1} style={{ flex: 1 }}>
+              {item.party_name}
+            </AppText>
+          </View>
+
+          {/* Items count summary */}
+          <AppText
+            variant="caption"
+            color={colors.textSecondary}
+            style={{ marginBottom: spacing.xs }}
+          >
+            {item.items_count} {t.invoices.item.toLowerCase()}
+            {item.items_count === 1 ? '' : 's'}
+          </AppText>
+
+          {/* Divider */}
+          <View style={styles.cardDivider} />
+
+          {/* Card Footer: Financial Summary */}
+          <View style={styles.cardFooter}>
+            <View>
+              <AppText variant="caption" color={colors.textSecondary}>
+                {t.invoices.totalAmount}
+              </AppText>
+              <AppText variant="bodyLargeBold">{formatCurrency(Number(item.total_amount))}</AppText>
+            </View>
+
+            <View style={{ alignItems: 'flex-end' }}>
               <AppBadge
-                label={isPaid ? 'PAID' : `Baki: ${formatCurrency(Number(item.remaining_amount))}`}
-                variant={isPaid ? 'success' : hasBaki ? 'danger' : 'neutral'}
+                label={
+                  isPaid
+                    ? t.invoices.fullyPaid
+                    : hasBaki
+                      ? `${t.invoices.filterBaki}: ${formatCurrency(Number(item.remaining_amount))}`
+                      : t.invoices.unpaid
+                }
+                variant={isPaid ? 'success' : 'danger'}
               />
+              {hasBaki && Number(item.paid_amount) > 0 && (
+                <AppText variant="caption" color={colors.jama} style={{ marginTop: 2 }}>
+                  {t.invoices.paidAmount}: {formatCurrency(Number(item.paid_amount))}
+                </AppText>
+              )}
             </View>
           </View>
         </AppCard>
@@ -116,28 +156,27 @@ export default function InvoicesScreen() {
   return (
     <AppScreenContainer
       edges={['top']}
-      style={styles.container}
       header={
         <AppHeader
-          title="Invoices"
-          subtitle="Bill History & Records"
-          showMenu={true}
+          title={t.invoices.title}
+          subtitle={t.invoices.subtitle}
           rightAction={
             <AppButton
-              title="+ Create Bill"
+              title={t.invoices.createFirstBill}
               size="sm"
               variant="primary"
-              onPress={() => router.push('/(app)/invoices/create' as any)}
+              onPress={() => router.push('/(app)/invoices/create')}
+              style={styles.headerAddBtn}
             />
           }
         />
       }
     >
-      {/* Summary Metrics Banner */}
+      {/* High-Level Ledger Summary Bar */}
       <AppCard style={styles.summaryBanner}>
         <View style={styles.summaryCol}>
           <AppText variant="caption" color={colors.textSecondary}>
-            TOTAL BILLS
+            {t.invoices.title.toUpperCase()}
           </AppText>
           <AppText variant="h3">{invoices?.length || 0}</AppText>
         </View>
@@ -146,7 +185,7 @@ export default function InvoicesScreen() {
 
         <View style={styles.summaryCol}>
           <AppText variant="caption" color={colors.textSecondary}>
-            TOTAL BILLED
+            {t.invoices.totalAmount.toUpperCase()}
           </AppText>
           <AppText variant="h3" color={colors.primary}>
             {formatCurrency(totalBilledPaise)}
@@ -157,7 +196,7 @@ export default function InvoicesScreen() {
 
         <View style={styles.summaryCol}>
           <AppText variant="caption" color={colors.textSecondary}>
-            TOTAL BAKI
+            {t.invoices.filterBaki.toUpperCase()}
           </AppText>
           <AppText variant="h3" color={colors.baki}>
             {formatCurrency(totalBakiPaise)}
@@ -174,7 +213,7 @@ export default function InvoicesScreen() {
           style={styles.searchIcon}
         />
         <AppTextInput
-          placeholder="Search by invoice #, customer, or buyer..."
+          placeholder={t.invoices.searchPlaceholder}
           value={searchQuery}
           onChangeText={setSearchQuery}
           containerStyle={styles.searchInputContainer}
@@ -201,14 +240,14 @@ export default function InvoicesScreen() {
               color={activeTab === tab ? colors.textInverse : colors.textSecondary}
             >
               {tab === 'ALL'
-                ? 'All'
+                ? t.invoices.filterAll
                 : tab === 'CUSTOMERS'
-                  ? 'Customers'
+                  ? t.invoices.filterCustomers
                   : tab === 'BUYERS'
-                    ? 'Buyers'
+                    ? t.invoices.filterBuyers
                     : tab === 'BAKI'
-                      ? 'Baki Due'
-                      : 'Paid'}
+                      ? t.invoices.filterBaki
+                      : t.invoices.filterPaid}
             </AppText>
           </TouchableOpacity>
         ))}
@@ -219,34 +258,29 @@ export default function InvoicesScreen() {
         <View style={styles.centerState}>
           <ActivityIndicator size="large" color={colors.primary} />
           <AppText variant="body" color={colors.textSecondary} style={styles.stateText}>
-            Loading invoice records...
+            {t.common.loading}
           </AppText>
         </View>
       ) : isError ? (
         <View style={styles.centerState}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.danger} />
           <AppText variant="bodyLargeBold" color={colors.danger} style={styles.stateTitle}>
-            Failed to load invoices
+            {t.common.error}
           </AppText>
           <AppText variant="body" color={colors.textSecondary} style={styles.stateSubtitle}>
             {(error as Error)?.message || 'Please check your connection and try again.'}
           </AppText>
-          <AppButton title="Retry" onPress={() => refetch()} style={styles.retryBtn} />
+          <AppButton title={t.common.retry} onPress={() => refetch()} style={styles.retryBtn} />
         </View>
       ) : invoices && invoices.length === 0 ? (
         <View style={styles.centerState}>
           <Ionicons name="receipt-outline" size={56} color={colors.textMuted} />
           <AppText variant="bodyLargeBold" style={styles.stateTitle}>
-            {searchQuery ? 'No matching bills found' : 'No invoices created yet'}
-          </AppText>
-          <AppText variant="body" color={colors.textSecondary} style={styles.stateSubtitle}>
-            {searchQuery
-              ? 'Try searching with a different bill number or party name.'
-              : 'Create your first bill to record items, calculate totals, and track payments.'}
+            {t.invoices.noInvoicesFound}
           </AppText>
           {!searchQuery && (
             <AppButton
-              title="+ Create First Bill"
+              title={t.invoices.createFirstBill}
               onPress={() => router.push('/(app)/invoices/create' as any)}
               style={styles.retryBtn}
             />
@@ -273,20 +307,9 @@ export default function InvoicesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.background,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-    marginTop: spacing.sm,
-  },
   headerAddBtn: {
-    minHeight: 40,
-    paddingHorizontal: spacing.md,
+    minHeight: 36,
+    paddingHorizontal: spacing.sm,
   },
   summaryBanner: {
     flexDirection: 'row',
@@ -302,31 +325,33 @@ const styles = StyleSheet.create({
   summaryDivider: {
     width: 1,
     backgroundColor: colors.border,
-    marginHorizontal: spacing.xs,
+    marginVertical: spacing.xs,
   },
   searchContainer: {
-    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: spacing.sm,
+    position: 'relative',
   },
   searchIcon: {
     position: 'absolute',
-    left: spacing.md,
-    top: 14,
+    left: spacing.sm,
     zIndex: 1,
   },
   searchInputContainer: {
+    flex: 1,
     marginBottom: 0,
   },
   searchInput: {
-    paddingLeft: spacing.xl + spacing.xs,
+    paddingLeft: spacing.xl,
     paddingRight: spacing.xl,
-    minHeight: 46,
+    backgroundColor: colors.surface,
   },
   clearSearchBtn: {
     position: 'absolute',
-    right: spacing.md,
-    top: 14,
+    right: spacing.sm,
     zIndex: 1,
+    padding: 4,
   },
   filterTabsRow: {
     flexDirection: 'row',
@@ -334,8 +359,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   filterChip: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    flex: 1,
+    paddingVertical: 6,
+    alignItems: 'center',
     borderRadius: borderRadius.round,
     backgroundColor: colors.surfaceSubtle,
     borderWidth: 1,
@@ -346,42 +372,42 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   listContent: {
-    paddingBottom: spacing.xxl,
+    paddingBottom: 160,
   },
   invoiceCard: {
     marginBottom: spacing.sm,
     padding: spacing.md,
   },
-  cardHeaderRow: {
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: spacing.xs,
   },
-  invoiceNumRow: {
+  partyRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: 2,
+    marginBottom: 4,
   },
-  partyBadge: {
-    paddingVertical: 1,
-    paddingHorizontal: spacing.xs,
+  cardDivider: {
+    height: 0.5,
+    backgroundColor: colors.borderLight,
+    marginVertical: spacing.xs,
   },
-  cardAmountCol: {
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'flex-end',
-    gap: 4,
-  },
-  totalAmountText: {
-    fontSize: 16,
+    marginTop: 2,
   },
   centerState: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: spacing.xxl,
     paddingHorizontal: spacing.lg,
   },
   stateText: {
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
   stateTitle: {
     marginTop: spacing.md,
@@ -390,9 +416,10 @@ const styles = StyleSheet.create({
   stateSubtitle: {
     marginTop: spacing.xs,
     textAlign: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   retryBtn: {
-    minWidth: 160,
+    minWidth: 140,
+    marginTop: spacing.sm,
   },
 });

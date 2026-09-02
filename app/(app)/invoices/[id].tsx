@@ -15,6 +15,7 @@ import { spacing } from '@/src/theme/spacing';
 import { borderRadius } from '@/src/theme/borderRadius';
 import { supabase } from '@/src/services/supabase/client';
 import { useAuthStore } from '@/src/store/authStore';
+import { useLanguage } from '@/src/localization';
 import { InvoiceDetail } from '@/src/types/invoice';
 import { DbInvoice, DbInvoiceItem, DbCustomer, DbBuyer, DbProfile } from '@/src/types/database';
 import { formatCurrency } from '@/src/utils';
@@ -24,6 +25,7 @@ import { pdfService } from '@/src/services/pdf.service';
 export default function InvoiceDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { t } = useLanguage();
 
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -123,10 +125,7 @@ export default function InvoiceDetailScreen() {
           language: lang,
         });
       } catch (genErr) {
-        Alert.alert(
-          'PDF Generation Error',
-          (genErr as Error).message || 'Unable to generate invoice PDF.',
-        );
+        Alert.alert(t.common.error, (genErr as Error).message || 'Unable to generate invoice PDF.');
         return;
       }
 
@@ -134,7 +133,7 @@ export default function InvoiceDetailScreen() {
         await pdfService.shareInvoicePdf(pdfResult.uri, invoice.invoice_number);
       } catch (shareErr) {
         Alert.alert(
-          'PDF Sharing Error',
+          t.common.error,
           (shareErr as Error).message || 'Unable to open system share menu.',
         );
       }
@@ -168,10 +167,7 @@ export default function InvoiceDetailScreen() {
           language: 'en',
         });
       } catch (genErr) {
-        Alert.alert(
-          'PDF Generation Error',
-          (genErr as Error).message || 'Unable to generate invoice PDF.',
-        );
+        Alert.alert(t.common.error, (genErr as Error).message || 'Unable to generate invoice PDF.');
         return;
       }
 
@@ -181,7 +177,7 @@ export default function InvoiceDetailScreen() {
           'WhatsApp Not Available',
           'WhatsApp is not installed on this device. Would you like to use the device share menu instead?',
           [
-            { text: 'Cancel', style: 'cancel' },
+            { text: t.common.cancel, style: 'cancel' },
             {
               text: 'Share PDF',
               onPress: () => pdfService.shareInvoicePdf(pdfResult.uri, invoice.invoice_number),
@@ -195,7 +191,7 @@ export default function InvoiceDetailScreen() {
         await pdfService.shareInvoiceViaWhatsApp(pdfResult.uri, invoice.invoice_number);
       } catch (shareErr) {
         Alert.alert(
-          'WhatsApp Share Error',
+          t.common.error,
           (shareErr as Error).message || 'Unable to share via WhatsApp. Please try standard share.',
         );
       }
@@ -228,7 +224,7 @@ export default function InvoiceDetailScreen() {
       });
     } catch (printErr) {
       Alert.alert(
-        'Printing Error',
+        t.common.error,
         (printErr as Error).message ||
           'Unable to start printing. Please check your printer settings.',
       );
@@ -240,25 +236,21 @@ export default function InvoiceDetailScreen() {
   const handleDeleteInvoice = () => {
     if (!invoice) return;
 
-    Alert.alert(
-      'Delete Invoice',
-      `Are you sure you want to delete Bill #${invoice.invoice_number}? This will remove the bill from ledger records.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            const res = await deleteInvoiceMutation.mutateAsync(invoice.id);
-            if (!res.success) {
-              Alert.alert('Error', res.error || 'Failed to delete invoice.');
-            } else {
-              router.replace('/(app)/(tabs)/invoices');
-            }
-          },
+    Alert.alert(t.invoices.deleteConfirmTitle, t.invoices.deleteConfirmMessage, [
+      { text: t.common.cancel, style: 'cancel' },
+      {
+        text: t.invoices.delete,
+        style: 'destructive',
+        onPress: async () => {
+          const res = await deleteInvoiceMutation.mutateAsync(invoice.id);
+          if (!res.success) {
+            Alert.alert(t.common.error, res.error || 'Failed to delete invoice.');
+          } else {
+            router.replace('/(app)/(tabs)/invoices');
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
 
   if (loading) {
@@ -267,7 +259,7 @@ export default function InvoiceDetailScreen() {
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <AppText variant="body" color={colors.textSecondary} style={{ marginTop: spacing.sm }}>
-            Loading invoice details...
+            {t.common.loading}
           </AppText>
         </View>
       </AppScreenContainer>
@@ -280,7 +272,7 @@ export default function InvoiceDetailScreen() {
         <View style={styles.centerContainer}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.danger} />
           <AppText variant="h3" color={colors.danger} style={{ marginVertical: spacing.sm }}>
-            Error Loading Invoice
+            {t.common.error}
           </AppText>
           <AppText
             variant="body"
@@ -289,7 +281,7 @@ export default function InvoiceDetailScreen() {
           >
             {error || 'The requested invoice was not found.'}
           </AppText>
-          <AppButton title="Go Back" variant="outline" onPress={() => router.back()} />
+          <AppButton title={t.nav.back} variant="outline" onPress={() => router.back()} />
         </View>
       </AppScreenContainer>
     );
@@ -311,7 +303,7 @@ export default function InvoiceDetailScreen() {
         </TouchableOpacity>
 
         <AppText variant="h3" style={styles.headerTitle}>
-          Bill #{invoice.invoice_number}
+          #{invoice.invoice_number}
         </AppText>
 
         <View style={styles.headerActions}>
@@ -339,14 +331,14 @@ export default function InvoiceDetailScreen() {
           <View style={styles.metaRow}>
             <View>
               <AppText variant="caption" color={colors.textSecondary}>
-                BILLED TO ({invoice.party_type})
+                {invoice.party_type === 'CUSTOMER' ? t.invoices.customerBill : t.invoices.buyerBill}
               </AppText>
               <AppText variant="bodyLargeBold">{invoice.party_name}</AppText>
             </View>
 
             <View style={{ alignItems: 'flex-end' }}>
               <AppText variant="caption" color={colors.textSecondary}>
-                BILL DATE
+                {t.createInvoice.invoiceDate.toUpperCase()}
               </AppText>
               <AppText variant="bodyBold">
                 {new Date(invoice.invoice_date).toLocaleDateString('en-IN', {
@@ -367,11 +359,19 @@ export default function InvoiceDetailScreen() {
             }}
           >
             <AppBadge
-              label={invoice.party_type === 'CUSTOMER' ? 'Customer Bill' : 'Wholesale Buyer Bill'}
+              label={
+                invoice.party_type === 'CUSTOMER' ? t.invoices.customerBill : t.invoices.buyerBill
+              }
               variant="neutral"
             />
             <AppBadge
-              label={isPaid ? 'FULLY PAID' : hasBaki ? 'PENDING BAKI' : 'UNPAID'}
+              label={
+                isPaid
+                  ? t.invoices.fullyPaid
+                  : hasBaki
+                    ? `${t.invoices.filterBaki}: ${formatCurrency(Number(invoice.remaining_amount))}`
+                    : t.invoices.unpaid
+              }
               variant={isPaid ? 'success' : 'danger'}
             />
           </View>
@@ -386,7 +386,7 @@ export default function InvoiceDetailScreen() {
               }}
             >
               <AppText variant="caption" color={colors.textSecondary}>
-                NOTES
+                {t.createInvoice.notesOptional.toUpperCase()}
               </AppText>
               <AppText variant="body" color={colors.textPrimary}>
                 {invoice.notes}
@@ -398,7 +398,7 @@ export default function InvoiceDetailScreen() {
         {/* Phase 9: PDF Delivery & Actions Card */}
         <AppCard style={styles.card}>
           <AppText variant="bodyLargeBold" style={{ marginBottom: spacing.sm }}>
-            Invoice Actions
+            {t.invoices.invoiceActions}
           </AppText>
 
           {/* Share Actions (English & Gujarati) */}
@@ -442,7 +442,7 @@ export default function InvoiceDetailScreen() {
             >
               <Ionicons name="print-outline" size={18} color={colors.textPrimary} />
               <AppText variant="captionBold" color={colors.textPrimary}>
-                {printing ? 'Preparing Print...' : 'Print Bill'}
+                {printing ? t.common.loading : t.invoices.printBill}
               </AppText>
             </TouchableOpacity>
           </View>
@@ -451,12 +451,12 @@ export default function InvoiceDetailScreen() {
         {/* Itemized Table */}
         <AppCard style={styles.card}>
           <AppText variant="bodyLargeBold" style={{ marginBottom: spacing.sm }}>
-            Itemized Bill ({invoice.items.length})
+            {t.createInvoice.itemsTitle} ({invoice.items.length})
           </AppText>
 
           <View style={styles.tableHeader}>
             <AppText variant="caption" color={colors.textSecondary} style={{ flex: 2 }}>
-              ITEM
+              {t.invoices.item.toUpperCase()}
             </AppText>
             <AppText
               variant="caption"
@@ -487,7 +487,7 @@ export default function InvoiceDetailScreen() {
               color={colors.textSecondary}
               style={{ paddingVertical: spacing.sm }}
             >
-              No item details recorded.
+              No items.
             </AppText>
           ) : (
             invoice.items.map(item => (
@@ -513,7 +513,7 @@ export default function InvoiceDetailScreen() {
         <AppCard style={styles.card}>
           <View style={styles.calcRow}>
             <AppText variant="body" color={colors.textSecondary}>
-              Total Amount
+              {t.invoices.totalAmount}
             </AppText>
             <AppText variant="bodyLargeBold">
               {formatCurrency(Number(invoice.total_amount))}
@@ -522,7 +522,7 @@ export default function InvoiceDetailScreen() {
 
           <View style={styles.calcRow}>
             <AppText variant="body" color={colors.jama}>
-              Paid Amount (Jama)
+              {t.invoices.paidAmount}
             </AppText>
             <AppText variant="bodyBold" color={colors.jama}>
               {formatCurrency(Number(invoice.paid_amount))}
@@ -533,7 +533,7 @@ export default function InvoiceDetailScreen() {
 
           <View style={styles.calcRow}>
             <AppText variant="bodyLargeBold" color={hasBaki ? colors.baki : colors.textPrimary}>
-              Remaining Due (Baki)
+              {t.invoices.remainingDue}
             </AppText>
             <AppText variant="h3" color={hasBaki ? colors.baki : colors.jama}>
               {formatCurrency(Number(invoice.remaining_amount))}
@@ -546,10 +546,6 @@ export default function InvoiceDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.background,
-  },
   centerContainer: {
     flex: 1,
     alignItems: 'center',
@@ -568,15 +564,26 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    marginHorizontal: spacing.sm,
+    textAlign: 'center',
   },
   headerActions: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   actionIconBtn: {
     padding: spacing.xs,
+  },
+  scrollContent: {
+    paddingBottom: spacing.xxl,
+  },
+  card: {
+    marginBottom: spacing.md,
+    padding: spacing.md,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   pdfActionsRow: {
     flexDirection: 'row',
@@ -592,8 +599,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
   },
   whatsappBtn: {
@@ -604,22 +611,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  scrollContent: {
-    paddingBottom: spacing.xxl,
-  },
-  card: {
-    marginBottom: spacing.md,
-    padding: spacing.md,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
   tableHeader: {
     flexDirection: 'row',
+    paddingBottom: spacing.xs,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    paddingBottom: spacing.xs,
     marginBottom: spacing.xs,
   },
   tableRow: {
@@ -633,11 +629,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginVertical: 4,
+    paddingVertical: 4,
   },
   calcDivider: {
     height: 1,
     backgroundColor: colors.border,
-    marginVertical: spacing.sm,
+    marginVertical: spacing.xs,
   },
 });

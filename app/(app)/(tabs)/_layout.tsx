@@ -3,8 +3,11 @@ import { Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/src/theme/colors';
+import { useLanguage } from '@/src/localization';
 
 export default function TabLayout() {
+  const { t } = useLanguage();
+
   return (
     <Tabs
       screenOptions={{
@@ -28,7 +31,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
+          title: t.nav.dashboard,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="grid-outline" size={size} color={color} />
           ),
@@ -37,7 +40,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="invoices"
         options={{
-          title: 'Invoices',
+          title: t.nav.invoices,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="receipt-outline" size={size} color={color} />
           ),
@@ -46,7 +49,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="customers"
         options={{
-          title: 'Customers',
+          title: t.nav.customers,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" size={size} color={color} />
           ),
@@ -55,7 +58,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="buyers"
         options={{
-          title: 'Buyers',
+          title: t.nav.buyers,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="business-outline" size={size} color={color} />
           ),

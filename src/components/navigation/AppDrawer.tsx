@@ -17,6 +17,7 @@ import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
 import { borderRadius } from '@/src/theme/borderRadius';
 import { useAuth } from '@/src/features/auth';
+import { useLanguage } from '@/src/localization';
 import { formatPhoneDisplay } from '@/src/utils/phone';
 import { useDrawer } from './DrawerContext';
 
@@ -27,6 +28,7 @@ export const AppDrawer: React.FC = () => {
   const router = useRouter();
   const { user, profile, signOut } = useAuth();
   const { isOpen, closeDrawer } = useDrawer();
+  const { t } = useLanguage();
 
   const animX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const animOpacity = useRef(new Animated.Value(0)).current;
@@ -84,10 +86,10 @@ export const AppDrawer: React.FC = () => {
 
   const handleLogout = () => {
     closeDrawer();
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t.settings.confirmLogoutTitle, t.settings.confirmLogoutMessage, [
+      { text: t.common.cancel, style: 'cancel' },
       {
-        text: 'Sign Out',
+        text: t.nav.logout,
         style: 'destructive',
         onPress: async () => {
           await signOut();
@@ -135,7 +137,7 @@ export const AppDrawer: React.FC = () => {
               {shopName}
             </AppText>
             <AppText variant="captionBold" color={colors.primary}>
-              Invoice Bill Maker
+              {t.nav.retailInvoice}
             </AppText>
             {displayPhone ? (
               <AppText variant="caption" color={colors.textSecondary} style={{ marginTop: 2 }}>
@@ -158,7 +160,7 @@ export const AppDrawer: React.FC = () => {
                 color={colors.primary}
                 style={styles.menuIcon}
               />
-              <AppText variant="bodyMedium">Dashboard</AppText>
+              <AppText variant="bodyMedium">{t.nav.dashboard}</AppText>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -171,7 +173,7 @@ export const AppDrawer: React.FC = () => {
                 color={colors.primary}
                 style={styles.menuIcon}
               />
-              <AppText variant="bodyMedium">Invoices</AppText>
+              <AppText variant="bodyMedium">{t.nav.invoices}</AppText>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -184,7 +186,7 @@ export const AppDrawer: React.FC = () => {
                 color={colors.primary}
                 style={styles.menuIcon}
               />
-              <AppText variant="bodyMedium">Customers</AppText>
+              <AppText variant="bodyMedium">{t.nav.customers}</AppText>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -197,7 +199,7 @@ export const AppDrawer: React.FC = () => {
                 color={colors.primary}
                 style={styles.menuIcon}
               />
-              <AppText variant="bodyMedium">Buyers</AppText>
+              <AppText variant="bodyMedium">{t.nav.buyers}</AppText>
             </TouchableOpacity>
           </View>
 
@@ -215,7 +217,7 @@ export const AppDrawer: React.FC = () => {
                 color={colors.textPrimary}
                 style={styles.menuIcon}
               />
-              <AppText variant="bodyMedium">Settings</AppText>
+              <AppText variant="bodyMedium">{t.nav.settings}</AppText>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -228,7 +230,7 @@ export const AppDrawer: React.FC = () => {
                 color={colors.textPrimary}
                 style={styles.menuIcon}
               />
-              <AppText variant="bodyMedium">Language / ભાષા</AppText>
+              <AppText variant="bodyMedium">{t.nav.language}</AppText>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -241,7 +243,7 @@ export const AppDrawer: React.FC = () => {
                 color={colors.textPrimary}
                 style={styles.menuIcon}
               />
-              <AppText variant="bodyMedium">Account & Shop Profile</AppText>
+              <AppText variant="bodyMedium">{t.nav.shopProfile}</AppText>
             </TouchableOpacity>
           </View>
 
@@ -259,7 +261,7 @@ export const AppDrawer: React.FC = () => {
                 style={styles.menuIcon}
               />
               <AppText variant="bodyLargeBold" color={colors.danger}>
-                Sign Out
+                {t.nav.logout}
               </AppText>
             </TouchableOpacity>
           </View>

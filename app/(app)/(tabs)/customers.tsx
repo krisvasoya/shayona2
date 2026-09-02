@@ -7,7 +7,6 @@ import {
   RefreshControl,
   Modal,
   ScrollView,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -30,11 +29,13 @@ import {
   customerFormSchema,
   CustomerSummary,
 } from '@/src/features/customers';
+import { useLanguage } from '@/src/localization';
 import { formatCurrency } from '@/src/utils';
 import { formatPhoneDisplay } from '@/src/utils/phone';
 
 export default function CustomersScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
@@ -82,21 +83,28 @@ export default function CustomersScreen() {
       return;
     }
 
-    const res = await createCustomerMutation.mutateAsync(parseResult.data);
+    const res = await createCustomerMutation.mutateAsync({
+      name: name.trim(),
+      phone: phone.trim() || undefined,
+      address: address.trim() || undefined,
+    });
 
     if (res.error) {
-      Alert.alert('Error', res.error);
+      setFormErrors({ form: res.error || 'Failed to create customer.' });
     } else {
       setIsAddModalOpen(false);
       resetForm();
     }
   };
 
-  // Total Baki Calculation
-  const totalOutstandingBaki = (customers || []).reduce((acc, c) => acc + (c.total_baki || 0), 0);
+  // Aggregated Baki
+  const totalOutstandingBaki = (customers || []).reduce(
+    (sum, c) => sum + Number(c.total_baki || 0),
+    0,
+  );
 
   const renderCustomerItem = ({ item }: { item: CustomerSummary }) => {
-    const hasBaki = item.total_baki > 0;
+    const hasBaki = Number(item.total_baki) > 0;
 
     return (
       <TouchableOpacity
@@ -116,7 +124,7 @@ export default function CustomersScreen() {
                 {item.name}
               </AppText>
               <AppText variant="caption" color={colors.textSecondary} style={styles.phoneText}>
-                {item.phone ? formatPhoneDisplay(item.phone) : 'No phone number'}
+                {item.phone ? formatPhoneDisplay(item.phone) : '—'}
               </AppText>
             </View>
 
@@ -129,7 +137,7 @@ export default function CustomersScreen() {
                 {formatCurrency(item.total_baki)}
               </AppText>
               <AppBadge
-                label={hasBaki ? 'Baki (Due)' : 'Clear'}
+                label={hasBaki ? t.invoices.filterBaki : t.invoices.fullyPaid}
                 variant={hasBaki ? 'danger' : 'success'}
               />
             </View>
@@ -142,18 +150,17 @@ export default function CustomersScreen() {
   return (
     <AppScreenContainer
       edges={['top']}
-      style={styles.container}
       header={
         <AppHeader
-          title="Customers"
-          subtitle="Grahak Ledger & Accounts"
-          showMenu={true}
+          title={t.customers.title}
+          subtitle={t.customers.subtitle}
           rightAction={
             <AppButton
-              title="+ Add Customer"
+              title={t.customers.addCustomer}
               size="sm"
               variant="primary"
               onPress={() => setIsAddModalOpen(true)}
+              style={styles.headerAddBtn}
             />
           }
         />
@@ -163,7 +170,7 @@ export default function CustomersScreen() {
       <AppCard style={styles.summaryBanner}>
         <View style={styles.summaryCol}>
           <AppText variant="caption" color={colors.textSecondary}>
-            TOTAL CUSTOMERS
+            {t.customers.title.toUpperCase()}
           </AppText>
           <AppText variant="h3">{customers?.length || 0}</AppText>
         </View>
@@ -172,7 +179,7 @@ export default function CustomersScreen() {
 
         <View style={styles.summaryCol}>
           <AppText variant="caption" color={colors.textSecondary}>
-            TOTAL BAKI (PENDING)
+            {t.customers.totalBaki.toUpperCase()}
           </AppText>
           <AppText variant="h3" color={colors.baki}>
             {formatCurrency(totalOutstandingBaki)}
@@ -189,7 +196,7 @@ export default function CustomersScreen() {
           style={styles.searchIcon}
         />
         <AppTextInput
-          placeholder="Search by customer name or phone..."
+          placeholder={t.customers.searchPlaceholder}
           value={searchQuery}
           onChangeText={setSearchQuery}
           containerStyle={styles.searchInputContainer}
@@ -208,34 +215,29 @@ export default function CustomersScreen() {
         <View style={styles.centerState}>
           <ActivityIndicator size="large" color={colors.primary} />
           <AppText variant="body" color={colors.textSecondary} style={styles.stateText}>
-            Loading customer accounts...
+            {t.common.loading}
           </AppText>
         </View>
       ) : isError ? (
         <View style={styles.centerState}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.danger} />
           <AppText variant="bodyLargeBold" color={colors.danger} style={styles.stateTitle}>
-            Failed to load customers
+            {t.common.error}
           </AppText>
           <AppText variant="body" color={colors.textSecondary} style={styles.stateSubtitle}>
             {(error as Error)?.message || 'Please check your connection and try again.'}
           </AppText>
-          <AppButton title="Retry" onPress={() => refetch()} style={styles.retryBtn} />
+          <AppButton title={t.common.retry} onPress={() => refetch()} style={styles.retryBtn} />
         </View>
       ) : customers && customers.length === 0 ? (
         <View style={styles.centerState}>
           <Ionicons name="people-outline" size={56} color={colors.textMuted} />
           <AppText variant="bodyLargeBold" style={styles.stateTitle}>
-            {searchQuery ? 'No matching customers found' : 'No customers added yet'}
-          </AppText>
-          <AppText variant="body" color={colors.textSecondary} style={styles.stateSubtitle}>
-            {searchQuery
-              ? 'Try searching with a different name or mobile number.'
-              : 'Add your regular customers to track invoices and pending Baki balances.'}
+            {t.customers.noCustomers}
           </AppText>
           {!searchQuery && (
             <AppButton
-              title="+ Add First Customer"
+              title={t.customers.addCustomer}
               onPress={() => setIsAddModalOpen(true)}
               style={styles.retryBtn}
             />
@@ -268,7 +270,7 @@ export default function CustomersScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <AppText variant="h3">Add New Customer</AppText>
+              <AppText variant="h3">{t.customers.createCustomerTitle}</AppText>
               <TouchableOpacity
                 onPress={() => {
                   setIsAddModalOpen(false);
@@ -281,7 +283,7 @@ export default function CustomersScreen() {
 
             <ScrollView showsVerticalScrollIndicator={false}>
               <AppTextInput
-                label="Customer Name *"
+                label={`${t.customers.customerName} *`}
                 placeholder="e.g. Ramesh Patel"
                 value={name}
                 onChangeText={setName}
@@ -290,18 +292,17 @@ export default function CustomersScreen() {
               />
 
               <AppTextInput
-                label="Mobile Number (Optional)"
+                label={t.customers.phoneNumber}
                 placeholder="10-digit mobile number"
                 value={phone}
                 onChangeText={setPhone}
                 keyboardType="phone-pad"
                 maxLength={10}
                 error={formErrors.phone}
-                helperText="Indian 10-digit mobile number"
               />
 
               <AppTextInput
-                label="Address / Area (Optional)"
+                label={t.customers.address}
                 placeholder="Shop address, village, or area"
                 value={address}
                 onChangeText={setAddress}
@@ -312,7 +313,7 @@ export default function CustomersScreen() {
 
               <View style={styles.modalActionRow}>
                 <AppButton
-                  title="Cancel"
+                  title={t.common.cancel}
                   variant="outline"
                   onPress={() => {
                     setIsAddModalOpen(false);
@@ -321,7 +322,7 @@ export default function CustomersScreen() {
                   style={styles.modalBtn}
                 />
                 <AppButton
-                  title="Save Customer"
+                  title={t.customers.saveCustomer}
                   variant="primary"
                   loading={createCustomerMutation.isPending}
                   onPress={handleCreateCustomer}
@@ -337,20 +338,9 @@ export default function CustomersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.background,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-    marginTop: spacing.sm,
-  },
   headerAddBtn: {
-    minHeight: 40,
-    paddingHorizontal: spacing.md,
+    minHeight: 36,
+    paddingHorizontal: spacing.sm,
   },
   summaryBanner: {
     flexDirection: 'row',
@@ -366,34 +356,36 @@ const styles = StyleSheet.create({
   summaryDivider: {
     width: 1,
     backgroundColor: colors.border,
-    marginHorizontal: spacing.sm,
+    marginVertical: spacing.xs,
   },
   searchContainer: {
-    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: spacing.md,
+    position: 'relative',
   },
   searchIcon: {
     position: 'absolute',
-    left: spacing.md,
-    top: 14,
+    left: spacing.sm,
     zIndex: 1,
   },
   searchInputContainer: {
+    flex: 1,
     marginBottom: 0,
   },
   searchInput: {
-    paddingLeft: spacing.xl + spacing.xs,
+    paddingLeft: spacing.xl,
     paddingRight: spacing.xl,
-    minHeight: 46,
+    backgroundColor: colors.surface,
   },
   clearSearchBtn: {
     position: 'absolute',
-    right: spacing.md,
-    top: 14,
+    right: spacing.sm,
     zIndex: 1,
+    padding: 4,
   },
   listContent: {
-    paddingBottom: spacing.xxl,
+    paddingBottom: 160,
   },
   customerCard: {
     marginBottom: spacing.sm,
@@ -404,13 +396,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.primaryLight + '25',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: colors.surfaceSubtle,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   customerInfo: {
     flex: 1,
@@ -422,16 +416,16 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   amountText: {
-    marginBottom: 4,
+    marginBottom: 2,
   },
   centerState: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: spacing.xxl,
     paddingHorizontal: spacing.lg,
   },
   stateText: {
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
   stateTitle: {
     marginTop: spacing.md,
@@ -440,10 +434,11 @@ const styles = StyleSheet.create({
   stateSubtitle: {
     marginTop: spacing.xs,
     textAlign: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   retryBtn: {
-    minWidth: 160,
+    minWidth: 140,
+    marginTop: spacing.sm,
   },
   modalOverlay: {
     flex: 1,
@@ -465,9 +460,9 @@ const styles = StyleSheet.create({
   },
   modalActionRow: {
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: spacing.sm,
     marginTop: spacing.md,
-    marginBottom: spacing.lg,
+    paddingBottom: spacing.sm,
   },
   modalBtn: {
     flex: 1,
