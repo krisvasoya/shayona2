@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
   AppScreenContainer,
+  AppHeader,
   AppText,
   AppCard,
   AppButton,
@@ -29,7 +30,8 @@ import {
   customerFormSchema,
   CustomerSummary,
 } from '@/src/features/customers';
-import { formatCurrency, formatPhoneDisplay } from '@/src/utils';
+import { formatCurrency } from '@/src/utils';
+import { formatPhoneDisplay } from '@/src/utils/phone';
 
 export default function CustomersScreen() {
   const router = useRouter();
@@ -40,7 +42,7 @@ export default function CustomersScreen() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
   // TanStack Query hooks
   const {
@@ -72,20 +74,15 @@ export default function CustomersScreen() {
     });
 
     if (!parseResult.success) {
-      const errMap: Record<string, string> = {};
-      parseResult.error.issues.forEach(issue => {
-        const path = issue.path[0] as string;
-        errMap[path] = issue.message;
+      const errMap: { [key: string]: string } = {};
+      parseResult.error.errors.forEach(err => {
+        if (err.path[0]) errMap[err.path[0] as string] = err.message;
       });
       setFormErrors(errMap);
       return;
     }
 
-    const res = await createCustomerMutation.mutateAsync({
-      name: parseResult.data.name,
-      phone: parseResult.data.phone,
-      address: parseResult.data.address,
-    });
+    const res = await createCustomerMutation.mutateAsync(parseResult.data);
 
     if (res.error) {
       Alert.alert('Error', res.error);
@@ -143,24 +140,25 @@ export default function CustomersScreen() {
   };
 
   return (
-    <AppScreenContainer edges={['top']} style={styles.container}>
-      {/* Top Header */}
-      <View style={styles.headerRow}>
-        <View>
-          <AppText variant="h2">Customers</AppText>
-          <AppText variant="caption" color={colors.textSecondary}>
-            Grahak Ledger & Accounts
-          </AppText>
-        </View>
-
-        <AppButton
-          title="+ Add"
-          variant="primary"
-          onPress={() => setIsAddModalOpen(true)}
-          style={styles.headerAddBtn}
+    <AppScreenContainer
+      edges={['top']}
+      style={styles.container}
+      header={
+        <AppHeader
+          title="Customers"
+          subtitle="Grahak Ledger & Accounts"
+          showMenu={true}
+          rightAction={
+            <AppButton
+              title="+ Add Customer"
+              size="sm"
+              variant="primary"
+              onPress={() => setIsAddModalOpen(true)}
+            />
+          }
         />
-      </View>
-
+      }
+    >
       {/* Outstanding Stats Banner */}
       <AppCard style={styles.summaryBanner}>
         <View style={styles.summaryCol}>

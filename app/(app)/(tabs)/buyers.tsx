@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
   AppScreenContainer,
+  AppHeader,
   AppText,
   AppCard,
   AppButton,
@@ -35,10 +36,11 @@ export default function BuyersScreen() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
   // TanStack Query hooks
   const { data: buyers, isLoading, isError, error, refetch, isRefetching } = useBuyers(searchQuery);
+
   const createBuyerMutation = useCreateBuyer();
 
   const resetForm = () => {
@@ -58,20 +60,15 @@ export default function BuyersScreen() {
     });
 
     if (!parseResult.success) {
-      const errMap: Record<string, string> = {};
-      parseResult.error.issues.forEach(issue => {
-        const path = issue.path[0] as string;
-        errMap[path] = issue.message;
+      const errMap: { [key: string]: string } = {};
+      parseResult.error.errors.forEach(err => {
+        if (err.path[0]) errMap[err.path[0] as string] = err.message;
       });
       setFormErrors(errMap);
       return;
     }
 
-    const res = await createBuyerMutation.mutateAsync({
-      name: parseResult.data.name,
-      phone: parseResult.data.phone,
-      address: parseResult.data.address,
-    });
+    const res = await createBuyerMutation.mutateAsync(parseResult.data);
 
     if (res.error) {
       Alert.alert('Error', res.error);
@@ -95,7 +92,7 @@ export default function BuyersScreen() {
         <AppCard style={styles.buyerCard}>
           <View style={styles.cardHeader}>
             <View style={styles.avatarCircle}>
-              <AppText variant="bodyLargeBold" color={colors.accent}>
+              <AppText variant="bodyLargeBold" color={colors.info}>
                 {item.name.slice(0, 2).toUpperCase()}
               </AppText>
             </View>
@@ -129,24 +126,25 @@ export default function BuyersScreen() {
   };
 
   return (
-    <AppScreenContainer edges={['top']} style={styles.container}>
-      {/* Top Header */}
-      <View style={styles.headerRow}>
-        <View>
-          <AppText variant="h2">Buyers</AppText>
-          <AppText variant="caption" color={colors.textSecondary}>
-            Vyapari / Wholesale Directory
-          </AppText>
-        </View>
-
-        <AppButton
-          title="+ Add"
-          variant="primary"
-          onPress={() => setIsAddModalOpen(true)}
-          style={styles.headerAddBtn}
+    <AppScreenContainer
+      edges={['top']}
+      style={styles.container}
+      header={
+        <AppHeader
+          title="Buyers"
+          subtitle="Vyapari / Wholesale Directory"
+          showMenu={true}
+          rightAction={
+            <AppButton
+              title="+ Add Buyer"
+              size="sm"
+              variant="primary"
+              onPress={() => setIsAddModalOpen(true)}
+            />
+          }
         />
-      </View>
-
+      }
+    >
       {/* Outstanding Stats Banner */}
       <AppCard style={styles.summaryBanner}>
         <View style={styles.summaryCol}>

@@ -61,13 +61,11 @@ export default function TabLayout() {
           ),
         }}
       />
+      {/* Settings is accessible from Left Drawer only (hidden from bottom bar) */}
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
-          ),
+          href: null,
         }}
       />
     </Tabs>

@@ -41,7 +41,8 @@ export default function SettingsScreen() {
   return (
     <AppScreenContainer
       scrollable
-      header={<AppHeader title="Settings" subtitle="App & Business Preferences" />}
+      edges={['top']}
+      header={<AppHeader title="Settings" subtitle="App & Business Preferences" showBack={true} />}
     >
       {/* Business Profile Card */}
       <AppCard>

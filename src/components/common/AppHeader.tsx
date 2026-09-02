@@ -5,12 +5,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
+import { useDrawer } from '@/src/components/navigation/DrawerContext';
 
 export interface AppHeaderProps {
   title: string;
   subtitle?: string;
   showBack?: boolean;
   onBack?: () => void;
+  showMenu?: boolean;
+  onMenuPress?: () => void;
   rightAction?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }
@@ -20,10 +23,13 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   subtitle,
   showBack = false,
   onBack,
+  showMenu,
+  onMenuPress,
   rightAction,
   style,
 }) => {
   const router = useRouter();
+  const drawer = useDrawer();
 
   const handleBack = () => {
     if (onBack) {
@@ -33,6 +39,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     }
   };
 
+  const handleMenu = () => {
+    if (onMenuPress) {
+      onMenuPress();
+    } else if (drawer?.openDrawer) {
+      drawer.openDrawer();
+    }
+  };
+
+  // If showMenu is not explicitly defined, show menu when showBack is false
+  const shouldShowMenu = showMenu !== undefined ? showMenu : !showBack;
+
   return (
     <View style={[styles.header, style]}>
       <View style={styles.leftContainer}>
@@ -40,13 +57,24 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           <TouchableOpacity
             onPress={handleBack}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            style={styles.backButton}
+            style={styles.iconButton}
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
             <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
+        ) : shouldShowMenu ? (
+          <TouchableOpacity
+            onPress={handleMenu}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={styles.iconButton}
+            accessibilityRole="button"
+            accessibilityLabel="Open menu"
+          >
+            <Ionicons name="menu-outline" size={26} color={colors.textPrimary} />
+          </TouchableOpacity>
         ) : null}
+
         <View style={styles.titleContainer}>
           <AppText variant="h3" numberOfLines={1}>
             {title}
@@ -58,6 +86,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           ) : null}
         </View>
       </View>
+
       {rightAction ? <View style={styles.rightContainer}>{rightAction}</View> : null}
     </View>
   );
@@ -69,7 +98,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.screenPadding,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
@@ -80,9 +109,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  backButton: {
-    marginRight: spacing.md,
+  iconButton: {
+    marginRight: spacing.sm,
     padding: spacing.xs,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   titleContainer: {
     flex: 1,

@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
   AppScreenContainer,
+  AppHeader,
   AppText,
   AppCard,
   AppButton,
@@ -113,24 +114,25 @@ export default function InvoicesScreen() {
   };
 
   return (
-    <AppScreenContainer edges={['top']} style={styles.container}>
-      {/* Header */}
-      <View style={styles.headerRow}>
-        <View>
-          <AppText variant="h2">Invoices</AppText>
-          <AppText variant="caption" color={colors.textSecondary}>
-            Bill History & Records
-          </AppText>
-        </View>
-
-        <AppButton
-          title="+ Create Bill"
-          variant="primary"
-          onPress={() => router.push('/(app)/invoices/create' as any)}
-          style={styles.headerAddBtn}
+    <AppScreenContainer
+      edges={['top']}
+      style={styles.container}
+      header={
+        <AppHeader
+          title="Invoices"
+          subtitle="Bill History & Records"
+          showMenu={true}
+          rightAction={
+            <AppButton
+              title="+ Create Bill"
+              size="sm"
+              variant="primary"
+              onPress={() => router.push('/(app)/invoices/create' as any)}
+            />
+          }
         />
-      </View>
-
+      }
+    >
       {/* Summary Metrics Banner */}
       <AppCard style={styles.summaryBanner}>
         <View style={styles.summaryCol}>
