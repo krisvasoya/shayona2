@@ -56,7 +56,8 @@ function escapeHtml(str: string): string {
 export const pdfService = {
   /**
    * Generates clean, professional, non-GST printable HTML for customer-facing invoice.
-   * STRICT REQUIREMENT: Shows ONLY Subtotal & Grand Total (NO Jama, NO Paid Amount, NO Baki, NO Remaining Due).
+   * STRICT REQUIREMENT: Shows ONLY Grand Total (NO Subtotal, NO Jama, NO Paid Amount, NO Baki, NO Remaining Due).
+   * Optional Shop Address is rendered underneath Shop Name and Mobile ONLY when present.
    */
   generateInvoiceHtml(options: InvoicePdfOptions): string {
     const { invoice, profile, language = 'en' } = options;
@@ -69,12 +70,14 @@ export const pdfService = {
     const rawShopName = profile.shop_name || 'Shayona Enterprise';
     const shopName = escapeHtml(rawShopName);
     const shopPhone = profile.phone ? formatPhoneDisplay(profile.phone) : '';
+    const rawShopAddress = (profile.address || '').trim();
+    const shopAddress = escapeHtml(rawShopAddress);
     const partyName = escapeHtml(invoice.party_name);
 
     const grandTotalRupees = paiseToRupees(Number(invoice.total_amount || 0));
     const wordsText = amountInWords(grandTotalRupees, language);
 
-    // UI Translations - NO JAMA, NO BAKI, NO GST
+    // UI Translations - NO JAMA, NO BAKI, NO GST, NO SUBTOTAL
     const t = {
       title: isGu ? 'ઇનવોઇસ (INVOICE)' : 'INVOICE',
       invoiceNo: isGu ? 'ઇનવોઇસ નંબર' : 'INVOICE NO.',
@@ -93,7 +96,6 @@ export const pdfService = {
       colQty: isGu ? 'જથ્થો (QTY)' : 'QTY',
       colRate: isGu ? 'ભાવ (RATE)' : 'RATE (₹)',
       colAmount: isGu ? 'રકમ (AMOUNT)' : 'AMOUNT (₹)',
-      subtotal: isGu ? 'સબટોટલ (Subtotal)' : 'Subtotal',
       grandTotal: isGu ? 'કુલ રકમ (Grand Total)' : 'Grand Total',
       amountInWordsTitle: isGu
         ? 'અંકે રૂપિયા શબ્દોમાં (AMOUNT IN WORDS)'
@@ -201,6 +203,14 @@ export const pdfService = {
             color: #333333;
           }
 
+          .shop-address {
+            font-size: 12px;
+            font-weight: 500;
+            color: #333333;
+            margin-top: 2px;
+            white-space: pre-line;
+          }
+
           .meta-col {
             width: 40%;
             text-align: right;
@@ -297,7 +307,7 @@ export const pdfService = {
             background-color: #F9FAFB;
           }
 
-          /* Bottom Layout: Amount in Words & Totals */
+          /* Bottom Layout: Amount in Words & Grand Total */
           .summary-section {
             width: 100%;
             border-collapse: collapse;
@@ -338,38 +348,31 @@ export const pdfService = {
             color: #000000;
           }
 
-          /* Totals Table - ONLY Subtotal and Grand Total */
+          /* Totals Table - Grand Total ONLY */
           .totals-table {
             width: 100%;
             border-collapse: collapse;
             border: 1.5px solid #000000;
           }
 
-          .totals-table td {
-            padding: 8px 10px;
-            font-size: 13px;
-            border-bottom: 1px solid #E5E7EB;
+          .grand-total-row {
+            background-color: #F3F4F6;
+          }
+
+          .grand-total-row td {
+            padding: 12px 10px;
+            font-size: 15px;
+            font-weight: 800;
+            color: #000000;
           }
 
           .totals-label {
-            font-weight: 600;
-            color: #374151;
+            font-weight: 700;
+            color: #111827;
           }
 
           .totals-value {
             text-align: right;
-            font-weight: 700;
-            color: #000000;
-          }
-
-          .grand-total-row {
-            background-color: #F3F4F6;
-            border-top: 1.5px solid #000000;
-          }
-
-          .grand-total-row td {
-            padding: 10px 10px;
-            font-size: 15px;
             font-weight: 800;
             color: #000000;
           }
@@ -425,6 +428,7 @@ export const pdfService = {
               <td class="shop-col">
                 <div class="shop-name">${shopName}</div>
                 ${shopPhone ? `<div class="shop-phone">${t.mobile}: ${shopPhone}</div>` : ''}
+                ${shopAddress ? `<div class="shop-address">${shopAddress}</div>` : ''}
               </td>
               <td class="meta-col">
                 <div class="meta-label">${t.invoiceNo}</div>
@@ -457,7 +461,7 @@ export const pdfService = {
             </tbody>
           </table>
 
-          <!-- 5. Bottom Section: Amount in Words & Financial Breakdown (Subtotal & Grand Total ONLY) -->
+          <!-- 5. Bottom Section: Amount in Words & Grand Total -->
           <table class="summary-section">
             <tr>
               <td class="words-col">
@@ -468,10 +472,6 @@ export const pdfService = {
               </td>
               <td class="totals-col">
                 <table class="totals-table">
-                  <tr>
-                    <td class="totals-label">${t.subtotal}</td>
-                    <td class="totals-value">${formatCurrency(Number(invoice.total_amount))}</td>
-                  </tr>
                   <tr class="grand-total-row">
                     <td class="totals-label">${t.grandTotal}</td>
                     <td class="totals-value">${formatCurrency(Number(invoice.total_amount))}</td>

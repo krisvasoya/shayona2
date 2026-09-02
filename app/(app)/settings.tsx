@@ -184,29 +184,47 @@ export default function SettingsScreen() {
       header={<AppHeader title={t.settings.title} subtitle={t.settings.subtitle} showBack={true} />}
     >
       {/* Business Profile Card */}
-      <AppCard>
-        <AppText variant="h4" style={styles.cardSectionTitle}>
-          {t.settings.businessProfile}
-        </AppText>
-        <View style={styles.profileRow}>
-          <View style={styles.profileAvatar}>
-            <Ionicons name="storefront" size={24} color={colors.primary} />
-          </View>
-          <View style={styles.profileDetails}>
-            <AppText variant="bodyLargeBold">{shopName}</AppText>
-            {displayPhone ? (
-              <AppText variant="body" color={colors.textSecondary}>
-                {displayPhone}
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={() => router.push('/(app)/business-profile' as any)}
+      >
+        <AppCard>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+            <AppText variant="h4" style={styles.cardSectionTitle}>
+              {t.settings.businessProfile}
+            </AppText>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <AppText variant="caption" color={colors.primary} style={{ marginRight: 2, fontWeight: '600' }}>
+                {t.settings.editBusinessProfile}
               </AppText>
-            ) : userEmail ? (
-              <AppText variant="body" color={colors.textSecondary}>
-                {userEmail}
-              </AppText>
-            ) : null}
+              <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+            </View>
           </View>
-          <AppBadge label={t.common.active} variant="success" />
-        </View>
-      </AppCard>
+          <View style={styles.profileRow}>
+            <View style={styles.profileAvatar}>
+              <Ionicons name="storefront" size={24} color={colors.primary} />
+            </View>
+            <View style={styles.profileDetails}>
+              <AppText variant="bodyLargeBold">{shopName}</AppText>
+              {displayPhone ? (
+                <AppText variant="body" color={colors.textSecondary}>
+                  {displayPhone}
+                </AppText>
+              ) : userEmail ? (
+                <AppText variant="body" color={colors.textSecondary}>
+                  {userEmail}
+                </AppText>
+              ) : null}
+              {profile?.address ? (
+                <AppText variant="caption" color={colors.textMuted} numberOfLines={1} style={{ marginTop: 2 }}>
+                  {profile.address}
+                </AppText>
+              ) : null}
+            </View>
+            <AppBadge label={t.common.active} variant="success" />
+          </View>
+        </AppCard>
+      </TouchableOpacity>
 
       {/* Language Preferences Card with Radio Selection */}
       <AppCard>

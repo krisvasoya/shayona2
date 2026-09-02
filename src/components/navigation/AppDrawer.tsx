@@ -253,7 +253,7 @@ export const AppDrawer: React.FC = () => {
 
             <TouchableOpacity
               style={styles.menuItem}
-              onPress={() => handleNavigate('/(app)/settings')}
+              onPress={() => handleNavigate('/(app)/business-profile')}
             >
               <Ionicons
                 name="person-circle-outline"

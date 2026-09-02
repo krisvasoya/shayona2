@@ -10,11 +10,20 @@ WebBrowser.maybeCompleteAuthSession();
 
 export interface UserProfile {
   id: string;
+  name?: string | null;
+  email?: string | null;
   shop_name: string;
   phone?: string | null;
+  address?: string | null;
   language: 'en' | 'gu';
   created_at: string;
   updated_at: string;
+}
+
+export interface UpdateProfileParams {
+  shop_name: string;
+  phone?: string | null;
+  address?: string | null;
 }
 
 export interface AuthResult {
@@ -330,10 +339,49 @@ export const authService = {
       id: userId,
       shop_name: shopName,
       phone: displayPhone,
+      address: (userFallback?.user_metadata?.address as string) || null,
       language: 'en',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
+  },
+
+  /**
+   * Update authenticated user's business profile
+   */
+  async updateUserProfile(
+    userId: string,
+    updates: UpdateProfileParams,
+  ): Promise<{ profile: UserProfile | null; error?: string }> {
+    try {
+      const now = new Date().toISOString();
+      const payload: Record<string, any> = {
+        shop_name: updates.shop_name.trim(),
+        updated_at: now,
+      };
+
+      if (updates.phone !== undefined) {
+        payload.phone = updates.phone ? normalizePhoneE164(updates.phone) : null;
+      }
+
+      if (updates.address !== undefined) {
+        payload.address = updates.address && updates.address.trim().length > 0 ? updates.address.trim() : null;
+      }
+
+      const { data, error } = await (supabase.from('profiles') as any)
+        .update(payload)
+        .eq('id', userId)
+        .select('*')
+        .single();
+
+      if (error) {
+        return { profile: null, error: mapAuthError(error) };
+      }
+
+      return { profile: data as UserProfile };
+    } catch (err) {
+      return { profile: null, error: mapAuthError(err) };
+    }
   },
 
   /**

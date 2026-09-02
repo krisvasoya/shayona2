@@ -39,6 +39,7 @@ describe('Phase 15: End-to-End System, Edge-Case & Data-Integrity Test Suite', (
     email: 'shayona@test.internal',
     phone: '9876543210',
     shop_name: 'Shayona Enterprise & Co.',
+    address: null,
     language: 'en',
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
@@ -194,7 +195,7 @@ describe('Phase 15: End-to-End System, Edge-Case & Data-Integrity Test Suite', (
       ],
     };
 
-    it('English customer PDF contains Subtotal, Grand Total, Words, and Authorised Signatory', () => {
+    it('English customer PDF contains Grand Total, Words, and Authorised Signatory without Subtotal', () => {
       const html = pdfService.generateInvoiceHtml({
         invoice: sampleInvoice,
         profile: userAProfile,
@@ -204,6 +205,7 @@ describe('Phase 15: End-to-End System, Edge-Case & Data-Integrity Test Suite', (
       expect(html).toContain('INV-2026-999');
       expect(html).toContain('Shayona Enterprise &amp; Co.');
       expect(html).toContain('Grand Total');
+      expect(html).not.toContain('Subtotal');
       expect(html).toContain('₹29,500.00');
       expect(html).toContain('Twenty Nine Thousand Five Hundred Rupees Only');
       expect(html).toContain('Authorised Signatory');

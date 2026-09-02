@@ -78,7 +78,7 @@ export const backupService = {
       let profile: Partial<DbProfile> = {};
       try {
         const { data: profileData } = await (supabase.from('profiles') as any)
-          .select('name, shop_name, phone, email, language')
+          .select('name, shop_name, phone, email, address, language')
           .eq('id', userId)
           .single();
         if (profileData) {

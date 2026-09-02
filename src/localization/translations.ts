@@ -224,6 +224,23 @@ export const translations = {
       loggingOut: 'Logging out...',
       confirmLogoutTitle: 'Confirm Logout',
       confirmLogoutMessage: 'Are you sure you want to logout from your account?',
+      editBusinessProfile: 'Edit Business Profile',
+    },
+
+    // Business Profile
+    businessProfile: {
+      title: 'Business Profile',
+      subtitle: 'Manage your shop information & invoice header',
+      shopName: 'Shop Name',
+      shopNamePlaceholder: 'Enter Shop / Firm Name',
+      mobileNumber: 'Mobile Number',
+      mobileNumberPlaceholder: '10-digit mobile number',
+      shopAddress: 'Shop Address',
+      shopAddressPlaceholder: 'Enter shop address / city (Optional)',
+      addressHelper: 'Address is optional. If provided, it will appear on invoice headers.',
+      saveChanges: 'Save Changes',
+      saving: 'Saving changes...',
+      updateSuccess: 'Business profile updated successfully!',
     },
 
     // App Updates Center
@@ -517,6 +534,23 @@ export const translations = {
       loggingOut: 'લોગઆઉટ ચાલુ છે...',
       confirmLogoutTitle: 'લોગઆઉટ પુષ્ટિ',
       confirmLogoutMessage: 'શું તમે ખરેખર એકાઉન્ટમાંથી લોગઆઉટ કરવા માંગો છો?',
+      editBusinessProfile: 'દુકાન પ્રોફાઇલમાં ફેરફાર કરો',
+    },
+
+    // Business Profile
+    businessProfile: {
+      title: 'દુકાન પ્રોફાઇલ (Business Profile)',
+      subtitle: 'તમારી દુકાનની વિગતો અને બિલ હેડર મેનેજ કરો',
+      shopName: 'દુકાન / પેઢીનું નામ',
+      shopNamePlaceholder: 'દુકાનનું નામ દાખલ કરો',
+      mobileNumber: 'મોબાઇલ નંબર',
+      mobileNumberPlaceholder: '૧૦ અંકનો મોબાઇલ નંબર',
+      shopAddress: 'દુકાનનું સરનામું (Shop Address)',
+      shopAddressPlaceholder: 'દુકાનનું સરનામું / શહેર દાખલ કરો (મરજિયાત)',
+      addressHelper: 'સરનામું મરજિયાત છે. જો દાખલ કરશો તો તે બિલ હેડરમાં દેખાશે.',
+      saveChanges: 'ફેરફારો સાચવો',
+      saving: 'સાચવી રહ્યું છે...',
+      updateSuccess: 'દુકાન પ્રોફાઇલ સફળતાપૂર્વક અપડેટ થઈ ગઈ!',
     },
 
     // App Updates Center

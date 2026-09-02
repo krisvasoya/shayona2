@@ -58,13 +58,14 @@ describe('PHASE 8 & 9 — Professional Invoice PDF Generation & Delivery Tests',
     });
   });
 
-  describe('Customer-Facing Invoice HTML Template (Subtotal & Grand Total ONLY)', () => {
+  describe('Customer-Facing Invoice HTML Template (Grand Total ONLY & Optional Address)', () => {
     const mockProfile: DbProfile = {
       id: 'usr-123',
       name: 'Owner',
       email: null,
       phone: '9898967433',
       shop_name: 'Shayona Enterprise',
+      address: null,
       language: 'en',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -114,7 +115,7 @@ describe('PHASE 8 & 9 — Professional Invoice PDF Generation & Delivery Tests',
       invoice_number: 'INV-0002',
       invoice_date: '2026-09-02',
       party_type: 'BUYER',
-      party_id: 'buy-1',
+      party_id: 'buyer-1',
       party_name: 'Manish Textile Wholesale Hub',
       total_amount: 5000000,
       paid_amount: 2000000,
@@ -137,7 +138,7 @@ describe('PHASE 8 & 9 — Professional Invoice PDF Generation & Delivery Tests',
       ],
     };
 
-    it('should generate exact customer-facing non-GST invoice with Subtotal & Grand Total ONLY', () => {
+    it('should generate exact customer-facing non-GST invoice with Grand Total ONLY (No Subtotal)', () => {
       const options: InvoicePdfOptions = {
         invoice: customerInvoice,
         profile: mockProfile,
@@ -149,6 +150,8 @@ describe('PHASE 8 & 9 — Professional Invoice PDF Generation & Delivery Tests',
       // Shop Information (Dynamic)
       expect(html).toContain('Shayona Enterprise');
       expect(html).toContain('+91 98989 67433');
+      // No address line rendered in body when address is null
+      expect(html).not.toContain('<div class="shop-address">');
 
       // Invoice Meta
       expect(html).toContain('INV-0001');
@@ -164,10 +167,10 @@ describe('PHASE 8 & 9 — Professional Invoice PDF Generation & Delivery Tests',
       expect(html).toContain('₹20,000.00');
       expect(html).toContain('₹9,500.00');
 
-      // Totals: MUST contain Subtotal and Grand Total ONLY
-      expect(html).toContain('Subtotal');
+      // Totals: MUST contain Grand Total and NO Subtotal
       expect(html).toContain('Grand Total');
       expect(html).toContain('₹29,500.00');
+      expect(html).not.toContain('Subtotal');
 
       // STRICT CHECK: MUST NOT CONTAIN JAMA OR BAKI
       expect(html).not.toContain('Jama');
@@ -183,7 +186,23 @@ describe('PHASE 8 & 9 — Professional Invoice PDF Generation & Delivery Tests',
       expect(html).toContain('Shayona Enterprise');
     });
 
-    it('should render BUYER invoices with Subtotal and Grand Total ONLY, without Jama or Baki', () => {
+    it('should correctly render optional shop address when present', () => {
+      const profileWithAddress: DbProfile = {
+        ...mockProfile,
+        address: 'Shop 12, Relief Road, Ahmedabad, Gujarat',
+      };
+
+      const html = pdfService.generateInvoiceHtml({
+        invoice: customerInvoice,
+        profile: profileWithAddress,
+        language: 'en',
+      });
+
+      expect(html).toContain('Shop 12, Relief Road, Ahmedabad, Gujarat');
+      expect(html).toContain('class="shop-address"');
+    });
+
+    it('should render BUYER invoices with Grand Total ONLY, without Subtotal, Jama or Baki', () => {
       const options: InvoicePdfOptions = {
         invoice: buyerInvoice,
         profile: mockProfile,
@@ -195,8 +214,8 @@ describe('PHASE 8 & 9 — Professional Invoice PDF Generation & Delivery Tests',
       expect(html).toContain('BUYER');
       expect(html).toContain('Manish Textile Wholesale Hub');
       expect(html).toContain('Polyester Silk Dress Material');
-      expect(html).toContain('Subtotal');
       expect(html).toContain('Grand Total');
+      expect(html).not.toContain('Subtotal');
       expect(html).toContain('₹50,000.00');
       expect(html).toContain('Fifty Thousand Rupees Only');
 
@@ -205,7 +224,7 @@ describe('PHASE 8 & 9 — Professional Invoice PDF Generation & Delivery Tests',
       expect(html).not.toContain('Baki');
     });
 
-    it('should render Gujarati customer-facing invoice with Subtotal & Grand Total ONLY', () => {
+    it('should render Gujarati customer-facing invoice with Grand Total ONLY (No Subtotal)', () => {
       const options: InvoicePdfOptions = {
         invoice: customerInvoice,
         profile: mockProfile,
@@ -216,8 +235,8 @@ describe('PHASE 8 & 9 — Professional Invoice PDF Generation & Delivery Tests',
 
       expect(html).toContain('ઇનવોઇસ (INVOICE)');
       expect(html).toContain('ગ્રાહક (CUSTOMER)');
-      expect(html).toContain('સબટોટલ (Subtotal)');
       expect(html).toContain('કુલ રકમ (Grand Total)');
+      expect(html).not.toContain('સબટોટલ');
       expect(html).toContain('ઓગણત્રીસ હજાર પાંચસો રૂપિયા પૂરા');
       expect(html).toContain('સહી / સિક્કો');
 

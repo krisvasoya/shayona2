@@ -65,6 +65,7 @@ describe('PHASE 17 — Payment History & Outstanding Ledger Audit Tests', () => 
     email: 'shayona@test.com',
     phone: '9898967433',
     shop_name: 'Shayona Enterprise',
+    address: null,
     language: 'en',
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',

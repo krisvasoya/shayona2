@@ -18,6 +18,7 @@ export interface Database {
           email: string | null;
           phone: string | null;
           shop_name: string;
+          address: string | null;
           language: AppLanguage;
           created_at: string;
           updated_at: string;
@@ -28,6 +29,7 @@ export interface Database {
           email?: string | null;
           phone?: string | null;
           shop_name?: string;
+          address?: string | null;
           language?: AppLanguage;
           created_at?: string;
           updated_at?: string;
@@ -38,6 +40,7 @@ export interface Database {
           email?: string | null;
           phone?: string | null;
           shop_name?: string;
+          address?: string | null;
           language?: AppLanguage;
           created_at?: string;
           updated_at?: string;
