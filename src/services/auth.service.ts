@@ -80,7 +80,7 @@ export const authService = {
       };
 
       try {
-        await supabase.from('profiles').upsert(profileData, { onConflict: 'id' });
+        await (supabase.from('profiles') as any).upsert(profileData, { onConflict: 'id' });
       } catch {
         // Profile table might not be initialized yet in early Phase 2 before DB migration
       }
