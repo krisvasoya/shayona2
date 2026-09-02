@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/src/services/supabase/client';
 import { authStorage } from '@/src/services/supabase/storage';
 import { authService, UserProfile } from '@/src/services/auth.service';
+import { localStore } from '@/src/database/localStore';
 
 export interface AuthStoreState {
   user: User | null;
@@ -97,8 +98,12 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
   },
 
   signOut: async () => {
+    const currentUserId = get().user?.id;
     set({ isLoading: true });
     await authService.signOut();
+    if (currentUserId) {
+      await localStore.clearUserStore(currentUserId);
+    }
     set({
       user: null,
       session: null,
