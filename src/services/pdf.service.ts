@@ -1,3 +1,4 @@
+import * as Linking from 'expo-linking';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -583,5 +584,51 @@ export const pdfService = {
       mimeType: 'application/pdf',
       dialogTitle: invoiceNumber ? `Share Bill #${invoiceNumber}` : 'Share Invoice',
     });
+  },
+
+  /**
+   * Checks if WhatsApp is installed on the device
+   */
+  async isWhatsAppInstalled(): Promise<boolean> {
+    try {
+      return await Linking.canOpenURL('whatsapp://send');
+    } catch {
+      return false;
+    }
+  },
+
+  /**
+   * Share invoice PDF via WhatsApp
+   */
+  async shareInvoiceViaWhatsApp(uri: string, invoiceNumber?: string): Promise<void> {
+    const isAvailable = await Sharing.isAvailableAsync();
+    if (!isAvailable) {
+      throw new Error('Sharing is not available on this device.');
+    }
+
+    try {
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      if (!fileInfo.exists || fileInfo.size === 0) {
+        throw new Error('Generated invoice PDF file could not be found.');
+      }
+    } catch (err) {
+      if ((err as Error).message?.includes('could not be found')) {
+        throw err;
+      }
+    }
+
+    await Sharing.shareAsync(uri, {
+      UTI: '.pdf',
+      mimeType: 'application/pdf',
+      dialogTitle: invoiceNumber ? `Send Bill #${invoiceNumber} via WhatsApp` : 'Send via WhatsApp',
+    });
+  },
+
+  /**
+   * Print invoice using native print service
+   */
+  async printInvoice(options: InvoicePdfOptions): Promise<void> {
+    const html = this.generateInvoiceHtml(options);
+    await Print.printAsync({ html });
   },
 };

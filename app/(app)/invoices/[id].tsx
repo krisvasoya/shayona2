@@ -4,30 +4,32 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '@/src/services/supabase/client';
-import { useDeleteInvoice } from '@/src/features/invoices';
-import { pdfService } from '@/src/services/pdf.service';
-import { useAuthStore } from '@/src/store/authStore';
-import { AppScreenContainer, AppText, AppCard, AppButton, AppBadge } from '@/src/components/common';
+import { AppScreenContainer, AppText, AppCard, AppBadge, AppButton } from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
-import { DbInvoice, DbInvoiceItem, DbProfile } from '@/src/types/database';
+import { borderRadius } from '@/src/theme/borderRadius';
+import { supabase } from '@/src/services/supabase/client';
+import { useAuthStore } from '@/src/store/authStore';
 import { InvoiceDetail } from '@/src/types/invoice';
+import { DbInvoice, DbInvoiceItem, DbCustomer, DbBuyer, DbProfile } from '@/src/types/database';
 import { formatCurrency } from '@/src/utils';
+import { useDeleteInvoice } from '@/src/features/invoices';
+import { pdfService } from '@/src/services/pdf.service';
 
 export default function InvoiceDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useLocalSearchParams();
   const router = useRouter();
 
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [printing, setPrinting] = useState(false);
 
   const profile = useAuthStore(state => state.profile);
   const deleteInvoiceMutation = useDeleteInvoice();
@@ -58,20 +60,24 @@ export default function InvoiceDetailScreen() {
           .eq('invoice_id', typedInv.id)
           .order('created_at', { ascending: true });
 
-        // Fetch party name
-        let partyName = 'Customer';
-        if (typedInv.party_type === 'CUSTOMER') {
+        // Fetch customer or buyer
+        let partyName = 'Direct Party';
+        if (typedInv.party_type === 'CUSTOMER' && typedInv.party_id) {
           const { data: cust } = await (supabase.from('customers') as any)
-            .select('name')
+            .select('*')
             .eq('id', typedInv.party_id)
             .single();
-          if (cust) partyName = cust.name;
-        } else if (typedInv.party_type === 'BUYER') {
+          if (cust) {
+            partyName = (cust as DbCustomer).name;
+          }
+        } else if (typedInv.party_type === 'BUYER' && typedInv.party_id) {
           const { data: buy } = await (supabase.from('buyers') as any)
-            .select('name')
+            .select('*')
             .eq('id', typedInv.party_id)
             .single();
-          if (buy) partyName = buy.name;
+          if (buy) {
+            partyName = (buy as DbBuyer).name;
+          }
         }
 
         setInvoice({
@@ -137,6 +143,100 @@ export default function InvoiceDetailScreen() {
     }
   };
 
+  const handleShareWhatsApp = async () => {
+    if (!invoice) return;
+
+    try {
+      setGeneratingPdf(true);
+
+      const userProfile: DbProfile = (profile as DbProfile) || {
+        id: invoice.user_id,
+        name: 'Shop Owner',
+        email: null,
+        phone: null,
+        shop_name: 'Shayona Enterprise',
+        language: 'en',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      let pdfResult: { uri: string };
+      try {
+        pdfResult = await pdfService.createInvoicePdf({
+          invoice,
+          profile: userProfile,
+          language: 'en',
+        });
+      } catch (genErr) {
+        Alert.alert(
+          'PDF Generation Error',
+          (genErr as Error).message || 'Unable to generate invoice PDF.',
+        );
+        return;
+      }
+
+      const isInstalled = await pdfService.isWhatsAppInstalled();
+      if (!isInstalled) {
+        Alert.alert(
+          'WhatsApp Not Available',
+          'WhatsApp is not installed on this device. Would you like to use the device share menu instead?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Share PDF',
+              onPress: () => pdfService.shareInvoicePdf(pdfResult.uri, invoice.invoice_number),
+            },
+          ],
+        );
+        return;
+      }
+
+      try {
+        await pdfService.shareInvoiceViaWhatsApp(pdfResult.uri, invoice.invoice_number);
+      } catch (shareErr) {
+        Alert.alert(
+          'WhatsApp Share Error',
+          (shareErr as Error).message || 'Unable to share via WhatsApp. Please try standard share.',
+        );
+      }
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
+  const handlePrintInvoice = async (lang: 'en' | 'gu' = 'en') => {
+    if (!invoice) return;
+
+    try {
+      setPrinting(true);
+
+      const userProfile: DbProfile = (profile as DbProfile) || {
+        id: invoice.user_id,
+        name: 'Shop Owner',
+        email: null,
+        phone: null,
+        shop_name: 'Shayona Enterprise',
+        language: lang,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      await pdfService.printInvoice({
+        invoice,
+        profile: userProfile,
+        language: lang,
+      });
+    } catch (printErr) {
+      Alert.alert(
+        'Printing Error',
+        (printErr as Error).message ||
+          'Unable to start printing. Please check your printer settings.',
+      );
+    } finally {
+      setPrinting(false);
+    }
+  };
+
   const handleDeleteInvoice = () => {
     if (!invoice) return;
 
@@ -153,7 +253,7 @@ export default function InvoiceDetailScreen() {
             if (!res.success) {
               Alert.alert('Error', res.error || 'Failed to delete invoice.');
             } else {
-              router.back();
+              router.replace('/(app)/(tabs)/invoices');
             }
           },
         },
@@ -163,30 +263,34 @@ export default function InvoiceDetailScreen() {
 
   if (loading) {
     return (
-      <AppScreenContainer edges={['top']} style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <AppText variant="body" color={colors.textSecondary} style={{ marginTop: spacing.md }}>
-          Loading bill details...
-        </AppText>
+      <AppScreenContainer edges={['top', 'bottom']}>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <AppText variant="body" color={colors.textSecondary} style={{ marginTop: spacing.sm }}>
+            Loading invoice details...
+          </AppText>
+        </View>
       </AppScreenContainer>
     );
   }
 
   if (error || !invoice) {
     return (
-      <AppScreenContainer edges={['top']} style={styles.centerContainer}>
-        <Ionicons name="alert-circle-outline" size={48} color={colors.danger} />
-        <AppText variant="h3" color={colors.danger} style={{ marginTop: spacing.md }}>
-          Bill Not Found
-        </AppText>
-        <AppText
-          variant="body"
-          color={colors.textSecondary}
-          style={{ marginVertical: spacing.sm, textAlign: 'center' }}
-        >
-          {error || 'Unable to display requested invoice.'}
-        </AppText>
-        <AppButton title="Go Back" onPress={() => router.back()} style={{ minWidth: 140 }} />
+      <AppScreenContainer edges={['top', 'bottom']}>
+        <View style={styles.centerContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.danger} />
+          <AppText variant="h3" color={colors.danger} style={{ marginVertical: spacing.sm }}>
+            Error Loading Invoice
+          </AppText>
+          <AppText
+            variant="body"
+            color={colors.textSecondary}
+            style={{ textAlign: 'center', marginBottom: spacing.md }}
+          >
+            {error || 'The requested invoice was not found.'}
+          </AppText>
+          <AppButton title="Go Back" variant="outline" onPress={() => router.back()} />
+        </View>
       </AppScreenContainer>
     );
   }
@@ -195,8 +299,8 @@ export default function InvoiceDetailScreen() {
   const hasBaki = Number(invoice.remaining_amount) > 0;
 
   return (
-    <AppScreenContainer edges={['top']} style={styles.container}>
-      {/* Header */}
+    <AppScreenContainer edges={['top', 'bottom']}>
+      {/* Top Bar with Back, Title & Actions */}
       <View style={styles.navHeader}>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -291,24 +395,58 @@ export default function InvoiceDetailScreen() {
           )}
         </AppCard>
 
-        {/* Action Buttons: PDF Generation */}
-        <View style={styles.pdfActionsRow}>
-          <AppButton
-            title="📄 View / Share PDF (English)"
-            variant="primary"
-            loading={generatingPdf}
-            onPress={() => handleGenerateAndSharePdf('en')}
-            style={{ flex: 1 }}
-          />
+        {/* Phase 9: PDF Delivery & Actions Card */}
+        <AppCard style={styles.card}>
+          <AppText variant="bodyLargeBold" style={{ marginBottom: spacing.sm }}>
+            Invoice Actions
+          </AppText>
 
-          <AppButton
-            title="ગુજરાતી PDF"
-            variant="outline"
-            loading={generatingPdf}
-            onPress={() => handleGenerateAndSharePdf('gu')}
-            style={{ minWidth: 120 }}
-          />
-        </View>
+          {/* Share Actions (English & Gujarati) */}
+          <View style={styles.pdfActionsRow}>
+            <AppButton
+              title="📄 Share PDF (English)"
+              variant="primary"
+              loading={generatingPdf}
+              onPress={() => handleGenerateAndSharePdf('en')}
+              style={{ flex: 1 }}
+            />
+
+            <AppButton
+              title="ગુજરાતી PDF"
+              variant="outline"
+              loading={generatingPdf}
+              onPress={() => handleGenerateAndSharePdf('gu')}
+              style={{ minWidth: 120 }}
+            />
+          </View>
+
+          {/* Direct Delivery Actions: WhatsApp & Print */}
+          <View style={styles.deliveryActionsRow}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              disabled={generatingPdf || printing}
+              style={[styles.deliveryBtn, styles.whatsappBtn]}
+              onPress={handleShareWhatsApp}
+            >
+              <Ionicons name="logo-whatsapp" size={18} color="#FFFFFF" />
+              <AppText variant="captionBold" color="#FFFFFF">
+                WhatsApp
+              </AppText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              disabled={generatingPdf || printing}
+              style={[styles.deliveryBtn, styles.printBtn]}
+              onPress={() => handlePrintInvoice('en')}
+            >
+              <Ionicons name="print-outline" size={18} color={colors.textPrimary} />
+              <AppText variant="captionBold" color={colors.textPrimary}>
+                {printing ? 'Preparing Print...' : 'Print Bill'}
+              </AppText>
+            </TouchableOpacity>
+          </View>
+        </AppCard>
 
         {/* Itemized Table */}
         <AppCard style={styles.card}>
@@ -443,7 +581,28 @@ const styles = StyleSheet.create({
   pdfActionsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  deliveryActionsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  deliveryBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: borderRadius.md,
+  },
+  whatsappBtn: {
+    backgroundColor: '#25D366',
+  },
+  printBtn: {
+    backgroundColor: colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   scrollContent: {
     paddingBottom: spacing.xxl,
