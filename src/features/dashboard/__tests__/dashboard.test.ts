@@ -88,5 +88,23 @@ describe('Dashboard Feature Module Unit Tests', () => {
       expect(totalBaki).toBe(0);
       expect(pendingCount).toBe(0);
     });
+
+    it('Case D: should aggregate expenses independently without subtracting from Sales, Jama, or Baki', () => {
+      const invoices = [{ total_amount: 5000000, paid_amount: 3000000, remaining_amount: 2000000 }];
+      const expenses = [
+        { expense_date: '2026-09-02', amount: 15000 }, // ₹150
+        { expense_date: '2026-09-02', amount: 50000 }, // ₹500
+      ];
+
+      const totalBilled = invoices.reduce((sum, i) => sum + i.total_amount, 0);
+      const totalJama = invoices.reduce((sum, i) => sum + i.paid_amount, 0);
+      const totalBaki = invoices.reduce((sum, i) => sum + i.remaining_amount, 0);
+      const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+
+      expect(totalBilled).toBe(5000000);
+      expect(totalJama).toBe(3000000);
+      expect(totalBaki).toBe(2000000);
+      expect(totalExpenses).toBe(65000); // ₹650 in paise
+    });
   });
 });

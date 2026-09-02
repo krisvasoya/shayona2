@@ -292,18 +292,50 @@ export const syncService = {
         if (error) throw new Error(error.message);
       }
     }
+
+    // ----------------------------------------------------
+    // EXPENSE (Phase 23)
+    // ----------------------------------------------------
+    else if (entity === 'EXPENSE') {
+      if (operation === 'CREATE' || operation === 'UPDATE') {
+        const { error } = await (supabase.from('expenses') as any).upsert({
+          id: entity_id,
+          user_id: userId,
+          amount: payload?.amount,
+          expense_date: payload?.expense_date,
+          updated_at: new Date().toISOString(),
+        });
+        if (error) throw new Error(error.message);
+
+        const local = await localStore.getExpenseById(userId, entity_id);
+        if (local) {
+          await localStore.upsertExpense(userId, {
+            ...local,
+            sync_status: 'SYNCED',
+            local_updated_at: new Date().toISOString(),
+          });
+        }
+      } else if (operation === 'DELETE') {
+        const { error } = await (supabase.from('expenses') as any)
+          .delete()
+          .eq('id', entity_id)
+          .eq('user_id', userId);
+        if (error) throw new Error(error.message);
+      }
+    }
   },
 
   /**
    * Pull server updates and merge into local database
    */
   async pullFromServer(userId: string): Promise<void> {
-    const [custRes, buyRes, invRes, itemsRes, payRes] = await Promise.all([
+    const [custRes, buyRes, invRes, itemsRes, payRes, expRes] = await Promise.all([
       (supabase.from('customers') as any).select('*').eq('user_id', userId),
       (supabase.from('buyers') as any).select('*').eq('user_id', userId),
       (supabase.from('invoices') as any).select('*').eq('user_id', userId),
       (supabase.from('invoice_items') as any).select('*'),
       (supabase.from('payments') as any).select('*').eq('user_id', userId),
+      (supabase.from('expenses') as any).select('*').eq('user_id', userId),
     ]);
 
     if (custRes.data) {
@@ -357,6 +389,17 @@ export const syncService = {
           ...p,
           sync_status: 'SYNCED',
           local_updated_at: p.updated_at || p.created_at,
+        })),
+      );
+    }
+
+    if (expRes.data) {
+      await localStore.bulkUpsertExpenses(
+        userId,
+        expRes.data.map((e: any) => ({
+          ...e,
+          sync_status: 'SYNCED',
+          local_updated_at: e.updated_at || e.created_at,
         })),
       );
     }

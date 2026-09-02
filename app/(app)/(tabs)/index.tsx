@@ -299,6 +299,31 @@ export default function DashboardScreen() {
               </View>
             </View>
 
+            {/* 6b. Expenses Card (Phase 23) */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.expensesCard}
+              onPress={() => router.push('/(app)/expenses' as any)}
+            >
+              <View style={styles.cardHeaderRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="wallet-outline" size={16} color="#B45309" />
+                  <AppText variant="captionBold" style={styles.expensesLabel}>
+                    {t.dashboard.expenses}
+                  </AppText>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+              </View>
+              <View style={styles.expensesBottomRow}>
+                <AppText variant="h2" style={styles.expensesAmount}>
+                  {formatCurrency(dashboardData?.totalExpensesPaise || 0)}
+                </AppText>
+                <AppText variant="caption" style={styles.inSelectedPeriodText}>
+                  {t.dashboard.inSelectedPeriod}
+                </AppText>
+              </View>
+            </TouchableOpacity>
+
             {/* 7. Quick Actions Card */}
             <View style={styles.standardCard}>
               <AppText variant="h4" style={styles.sectionTitle}>
@@ -707,6 +732,32 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontWeight: '500',
     marginTop: 4,
+  },
+  expensesCard: {
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
+  },
+  expensesLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#B45309',
+    letterSpacing: 0.3,
+  },
+  expensesBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginTop: 4,
+  },
+  expensesAmount: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#B45309',
+    lineHeight: 28,
   },
 
   // Common Standard Card

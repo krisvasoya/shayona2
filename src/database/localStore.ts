@@ -5,6 +5,7 @@ import {
   LocalInvoice,
   LocalInvoiceItem,
   LocalPayment,
+  LocalExpense,
   SyncQueueItem,
 } from './types';
 
@@ -292,6 +293,67 @@ export const localStore = {
   },
 
   // ----------------------------------------------------
+  // Expenses
+  // ----------------------------------------------------
+  async getExpenses(userId: string): Promise<LocalExpense[]> {
+    const list = await this.getCollection<LocalExpense>(userId, 'expenses');
+    return list
+      .filter(e => e.sync_status !== 'PENDING_DELETE')
+      .sort((a, b) => {
+        const dateCmp =
+          new Date(b.expense_date || b.created_at).getTime() -
+          new Date(a.expense_date || a.created_at).getTime();
+        if (dateCmp !== 0) return dateCmp;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+  },
+
+  async getExpenseById(userId: string, id: string): Promise<LocalExpense | null> {
+    const list = await this.getExpenses(userId);
+    return list.find(e => e.id === id) || null;
+  },
+
+  async upsertExpense(userId: string, expense: LocalExpense): Promise<void> {
+    const list = await this.getCollection<LocalExpense>(userId, 'expenses');
+    const idx = list.findIndex(e => e.id === expense.id);
+    if (idx >= 0) {
+      list[idx] = expense;
+    } else {
+      list.unshift(expense);
+    }
+    await this.setCollection(userId, 'expenses', list);
+  },
+
+  async deleteExpense(userId: string, id: string): Promise<void> {
+    const list = await this.getCollection<LocalExpense>(userId, 'expenses');
+    const filtered = list.filter(e => e.id !== id);
+    await this.setCollection(userId, 'expenses', filtered);
+  },
+
+  async saveExpenses(userId: string, expenses: LocalExpense[]): Promise<void> {
+    await this.setCollection(userId, 'expenses', expenses);
+  },
+
+  async bulkUpsertExpenses(userId: string, serverExpenses: LocalExpense[]): Promise<void> {
+    const localList = await this.getCollection<LocalExpense>(userId, 'expenses');
+    const localMap = new Map<string, LocalExpense>();
+    localList.forEach(e => localMap.set(e.id, e));
+
+    serverExpenses.forEach(se => {
+      const existing = localMap.get(se.id);
+      if (!existing || existing.sync_status === 'SYNCED') {
+        localMap.set(se.id, {
+          ...se,
+          sync_status: 'SYNCED',
+          local_updated_at: se.updated_at || se.created_at,
+        });
+      }
+    });
+
+    await this.setCollection(userId, 'expenses', Array.from(localMap.values()));
+  },
+
+  // ----------------------------------------------------
   // Sync Queue (FIFO mutations)
   // ----------------------------------------------------
   async getSyncQueue(userId: string): Promise<SyncQueueItem[]> {
@@ -334,6 +396,7 @@ export const localStore = {
       getPartitionKey(userId, 'invoices'),
       getPartitionKey(userId, 'invoice_items'),
       getPartitionKey(userId, 'payments'),
+      getPartitionKey(userId, 'expenses'),
       getPartitionKey(userId, 'sync_queue'),
     ];
     keys.forEach(k => delete inMemoryCache[k]);

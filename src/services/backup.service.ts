@@ -9,13 +9,14 @@ import {
   DbInvoice,
   DbInvoiceItem,
   DbPayment,
+  DbExpense,
 } from '@/src/types/database';
 import { syncService } from './sync.service';
 import { networkService } from './network.service';
 
 export interface AccountBackupV1 {
-  backupVersion: 1;
-  appName: 'Shayona Invoice';
+  backupVersion: number;
+  appName: string;
   createdAt: string;
   userId: string;
   profile: Partial<DbProfile>;
@@ -24,6 +25,7 @@ export interface AccountBackupV1 {
   invoices: DbInvoice[];
   invoiceItems: DbInvoiceItem[];
   payments: DbPayment[];
+  expenses?: DbExpense[];
 }
 
 export interface RestoreResult {
@@ -32,6 +34,7 @@ export interface RestoreResult {
   buyersRestored: number;
   invoicesRestored: number;
   paymentsRestored: number;
+  expensesRestored?: number;
   error?: string;
 }
 
@@ -58,12 +61,13 @@ export const backupService = {
       }
 
       // 2. Fetch all user business records from local store
-      const [customers, buyers, invoices, allInvoiceItems, payments] = await Promise.all([
+      const [customers, buyers, invoices, allInvoiceItems, payments, expenses] = await Promise.all([
         localStore.getCustomers(userId),
         localStore.getBuyers(userId),
         localStore.getInvoices(userId),
         localStore.getCollection<DbInvoiceItem>(userId, 'invoice_items'),
         localStore.getPayments(userId),
+        localStore.getExpenses(userId),
       ]);
 
       // Filter line items belonging only to current user's invoices
@@ -96,6 +100,7 @@ export const backupService = {
         invoices: invoices.map(({ sync_status, local_updated_at, ...inv }) => inv as DbInvoice),
         invoiceItems,
         payments: payments.map(({ sync_status, local_updated_at, ...p }) => p as DbPayment),
+        expenses: expenses.map(({ sync_status, local_updated_at, ...e }) => e as DbExpense),
       };
 
       const dateStr = new Date().toISOString().split('T')[0];
@@ -348,7 +353,39 @@ export const backupService = {
         }
       }
 
-      // 5. Trigger cloud synchronization if device is online
+      // 5. Remap and upsert Expenses (Phase 23)
+      let expensesCount = 0;
+      if (Array.isArray(backupData.expenses)) {
+        for (const exp of backupData.expenses) {
+          const remappedExp: DbExpense = {
+            ...exp,
+            user_id: currentUserId,
+          };
+          await localStore.upsertExpense(currentUserId, {
+            ...remappedExp,
+            sync_status: 'PENDING_UPDATE',
+            local_updated_at: now,
+          });
+          await localStore.enqueueSyncItem(currentUserId, {
+            id: `sync-restore-exp-${remappedExp.id}`,
+            user_id: currentUserId,
+            entity: 'EXPENSE',
+            entity_id: remappedExp.id,
+            operation: 'CREATE',
+            payload: {
+              id: remappedExp.id,
+              user_id: currentUserId,
+              amount: remappedExp.amount,
+              expense_date: remappedExp.expense_date,
+            },
+            created_at: now,
+            retry_count: 0,
+          });
+          expensesCount++;
+        }
+      }
+
+      // 6. Trigger cloud synchronization if device is online
       if (networkService.isOnline()) {
         syncService.processQueue(currentUserId).catch(() => {});
       }
@@ -359,6 +396,7 @@ export const backupService = {
         buyersRestored: buyersCount,
         invoicesRestored: invoicesCount,
         paymentsRestored: paymentsCount,
+        expensesRestored: expensesCount,
       };
     } catch (err) {
       return {
@@ -367,6 +405,7 @@ export const backupService = {
         buyersRestored: 0,
         invoicesRestored: 0,
         paymentsRestored: 0,
+        expensesRestored: 0,
         error: (err as Error).message || 'Failed to restore backup.',
       };
     }

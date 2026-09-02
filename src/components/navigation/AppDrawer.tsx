@@ -203,6 +203,19 @@ export const AppDrawer: React.FC = () => {
               />
               <AppText variant="bodyMedium">{t.nav.buyers}</AppText>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => handleNavigate('/(app)/expenses')}
+            >
+              <Ionicons
+                name="wallet-outline"
+                size={20}
+                color={colors.primary}
+                style={styles.menuIcon}
+              />
+              <AppText variant="bodyMedium">{t.nav.expenses}</AppText>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.divider} />

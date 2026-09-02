@@ -209,6 +209,32 @@ export interface Database {
           updated_at?: string;
         };
       };
+      expenses: {
+        Row: {
+          id: string;
+          user_id: string;
+          expense_date: string; // YYYY-MM-DD
+          amount: number; // in Paise
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          expense_date?: string;
+          amount: number; // in Paise
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          expense_date?: string;
+          amount?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
   };
 }
@@ -219,3 +245,4 @@ export type DbBuyer = Database['public']['Tables']['buyers']['Row'];
 export type DbInvoice = Database['public']['Tables']['invoices']['Row'];
 export type DbInvoiceItem = Database['public']['Tables']['invoice_items']['Row'];
 export type DbPayment = Database['public']['Tables']['payments']['Row'];
+export type DbExpense = Database['public']['Tables']['expenses']['Row'];

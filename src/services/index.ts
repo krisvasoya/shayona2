@@ -7,3 +7,4 @@ export * from './sync.service';
 export * from './network.service';
 export * from './backup.service';
 export * from './update.service';
+export * from './expense.service';

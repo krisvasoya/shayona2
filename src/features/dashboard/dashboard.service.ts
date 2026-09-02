@@ -9,6 +9,7 @@ export interface DashboardMetrics {
   totalBilledPaise: number;
   totalJamaPaise: number;
   totalBakiPaise: number;
+  totalExpensesPaise: number;
   totalInvoicesCount: number;
   paidTransactionsCount: number;
   pendingInvoicesCount: number;
@@ -33,19 +34,29 @@ export const dashboardService = {
       syncService.pullFromServer(userId).catch(() => {});
     }
 
-    // 1. Read local invoices
-    const allInvoices = await localStore.getInvoices(userId);
+    // 1. Read local invoices and expenses
+    const [allInvoices, allExpenses] = await Promise.all([
+      localStore.getInvoices(userId),
+      localStore.getExpenses(userId),
+    ]);
 
     // Filter by date range (inclusive)
     const rangeInvoices = allInvoices.filter(inv => {
       return inv.invoice_date >= startDate && inv.invoice_date <= endDate;
     });
 
+    const rangeExpenses = allExpenses.filter(exp => {
+      return exp.expense_date >= startDate && exp.expense_date <= endDate;
+    });
+
+    const totalExpensesPaise = rangeExpenses.reduce((sum, exp) => sum + Number(exp.amount || 0), 0);
+
     if (rangeInvoices.length === 0) {
       return {
         totalBilledPaise: 0,
         totalJamaPaise: 0,
         totalBakiPaise: 0,
+        totalExpensesPaise,
         totalInvoicesCount: 0,
         paidTransactionsCount: 0,
         pendingInvoicesCount: 0,
@@ -126,6 +137,7 @@ export const dashboardService = {
       totalBilledPaise,
       totalJamaPaise,
       totalBakiPaise,
+      totalExpensesPaise,
       totalInvoicesCount: rangeInvoices.length,
       paidTransactionsCount,
       pendingInvoicesCount,
