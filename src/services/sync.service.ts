@@ -259,17 +259,51 @@ export const syncService = {
         if (error) throw new Error(error.message);
       }
     }
+
+    // ----------------------------------------------------
+    // PAYMENT (Phase 17)
+    // ----------------------------------------------------
+    else if (entity === 'PAYMENT') {
+      if (operation === 'CREATE' || operation === 'UPDATE') {
+        const { error } = await (supabase.from('payments') as any).upsert({
+          id: entity_id,
+          user_id: userId,
+          invoice_id: payload?.invoice_id,
+          amount: payload?.amount,
+          payment_date: payload?.payment_date,
+          notes: payload?.notes || null,
+          updated_at: new Date().toISOString(),
+        });
+        if (error) throw new Error(error.message);
+
+        const local = await localStore.getPaymentById(userId, entity_id);
+        if (local) {
+          await localStore.upsertPayment(userId, {
+            ...local,
+            sync_status: 'SYNCED',
+            local_updated_at: new Date().toISOString(),
+          });
+        }
+      } else if (operation === 'DELETE') {
+        const { error } = await (supabase.from('payments') as any)
+          .delete()
+          .eq('id', entity_id)
+          .eq('user_id', userId);
+        if (error) throw new Error(error.message);
+      }
+    }
   },
 
   /**
    * Pull server updates and merge into local database
    */
   async pullFromServer(userId: string): Promise<void> {
-    const [custRes, buyRes, invRes, itemsRes] = await Promise.all([
+    const [custRes, buyRes, invRes, itemsRes, payRes] = await Promise.all([
       (supabase.from('customers') as any).select('*').eq('user_id', userId),
       (supabase.from('buyers') as any).select('*').eq('user_id', userId),
       (supabase.from('invoices') as any).select('*').eq('user_id', userId),
       (supabase.from('invoice_items') as any).select('*'),
+      (supabase.from('payments') as any).select('*').eq('user_id', userId),
     ]);
 
     if (custRes.data) {
@@ -312,6 +346,17 @@ export const syncService = {
           ...item,
           sync_status: 'SYNCED',
           local_updated_at: item.created_at,
+        })),
+      );
+    }
+
+    if (payRes.data) {
+      await localStore.bulkUpsertPayments(
+        userId,
+        payRes.data.map((p: any) => ({
+          ...p,
+          sync_status: 'SYNCED',
+          local_updated_at: p.updated_at || p.created_at,
         })),
       );
     }

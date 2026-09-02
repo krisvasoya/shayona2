@@ -26,6 +26,14 @@ export function useInvoiceDetails(invoiceId: string) {
   });
 }
 
+export function useInvoicePayments(invoiceId: string) {
+  return useQuery({
+    queryKey: ['payments', invoiceId],
+    queryFn: () => invoiceService.getInvoicePayments(invoiceId),
+    enabled: Boolean(invoiceId),
+  });
+}
+
 export function useNextInvoiceNumber() {
   return useQuery({
     queryKey: ['next-invoice-number'],
@@ -60,6 +68,7 @@ export function useUpdateInvoice() {
       queryClient.invalidateQueries({ queryKey: INVOICES_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['invoice', variables.invoiceId] });
+      queryClient.invalidateQueries({ queryKey: ['payments', variables.invoiceId] });
       queryClient.invalidateQueries({ queryKey: CUSTOMERS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: BUYERS_QUERY_KEY });
     },
@@ -85,12 +94,22 @@ export function useRecordPayment() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ invoiceId, paymentRupees }: { invoiceId: string; paymentRupees: number }) =>
-      invoiceService.recordPayment(invoiceId, paymentRupees),
+    mutationFn: ({
+      invoiceId,
+      paymentRupees,
+      paymentDate,
+      notes,
+    }: {
+      invoiceId: string;
+      paymentRupees: number;
+      paymentDate?: string;
+      notes?: string;
+    }) => invoiceService.recordPayment(invoiceId, paymentRupees, paymentDate, notes),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: INVOICES_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['invoice', variables.invoiceId] });
+      queryClient.invalidateQueries({ queryKey: ['payments', variables.invoiceId] });
       queryClient.invalidateQueries({ queryKey: CUSTOMERS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: BUYERS_QUERY_KEY });
     },

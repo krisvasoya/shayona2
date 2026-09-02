@@ -1,5 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LocalCustomer, LocalBuyer, LocalInvoice, LocalInvoiceItem, SyncQueueItem } from './types';
+import {
+  LocalCustomer,
+  LocalBuyer,
+  LocalInvoice,
+  LocalInvoiceItem,
+  LocalPayment,
+  SyncQueueItem,
+} from './types';
 
 function getPartitionKey(userId: string, collection: string): string {
   return `@shayona_user_${userId}_${collection}`;
@@ -224,6 +231,67 @@ export const localStore = {
   },
 
   // ----------------------------------------------------
+  // Payments (Phase 17)
+  // ----------------------------------------------------
+  async getPayments(userId: string, invoiceId?: string): Promise<LocalPayment[]> {
+    const list = await this.getCollection<LocalPayment>(userId, 'payments');
+    const valid = list.filter(p => p.sync_status !== 'PENDING_DELETE');
+    if (invoiceId) {
+      return valid
+        .filter(p => p.invoice_id === invoiceId)
+        .sort(
+          (a, b) =>
+            new Date(b.payment_date || b.created_at).getTime() -
+            new Date(a.payment_date || a.created_at).getTime(),
+        );
+    }
+    return valid.sort(
+      (a, b) =>
+        new Date(b.payment_date || b.created_at).getTime() -
+        new Date(a.payment_date || a.created_at).getTime(),
+    );
+  },
+
+  async getPaymentById(userId: string, id: string): Promise<LocalPayment | null> {
+    const list = await this.getPayments(userId);
+    return list.find(p => p.id === id) || null;
+  },
+
+  async upsertPayment(userId: string, payment: LocalPayment): Promise<void> {
+    const list = await this.getCollection<LocalPayment>(userId, 'payments');
+    const idx = list.findIndex(p => p.id === payment.id);
+    if (idx >= 0) {
+      list[idx] = payment;
+    } else {
+      list.unshift(payment);
+    }
+    await this.setCollection(userId, 'payments', list);
+  },
+
+  async savePayments(userId: string, payments: LocalPayment[]): Promise<void> {
+    await this.setCollection(userId, 'payments', payments);
+  },
+
+  async bulkUpsertPayments(userId: string, serverPayments: LocalPayment[]): Promise<void> {
+    const localList = await this.getCollection<LocalPayment>(userId, 'payments');
+    const localMap = new Map<string, LocalPayment>();
+    localList.forEach(p => localMap.set(p.id, p));
+
+    serverPayments.forEach(sp => {
+      const existing = localMap.get(sp.id);
+      if (!existing || existing.sync_status === 'SYNCED') {
+        localMap.set(sp.id, {
+          ...sp,
+          sync_status: 'SYNCED',
+          local_updated_at: sp.updated_at || sp.created_at,
+        });
+      }
+    });
+
+    await this.setCollection(userId, 'payments', Array.from(localMap.values()));
+  },
+
+  // ----------------------------------------------------
   // Sync Queue (FIFO mutations)
   // ----------------------------------------------------
   async getSyncQueue(userId: string): Promise<SyncQueueItem[]> {
@@ -265,6 +333,7 @@ export const localStore = {
       getPartitionKey(userId, 'buyers'),
       getPartitionKey(userId, 'invoices'),
       getPartitionKey(userId, 'invoice_items'),
+      getPartitionKey(userId, 'payments'),
       getPartitionKey(userId, 'sync_queue'),
     ];
     keys.forEach(k => delete inMemoryCache[k]);

@@ -1,8 +1,8 @@
-import { DbCustomer, DbBuyer, DbInvoice, DbInvoiceItem } from '@/src/types/database';
+import { DbCustomer, DbBuyer, DbInvoice, DbInvoiceItem, DbPayment } from '@/src/types/database';
 
 export type SyncStatus = 'SYNCED' | 'PENDING_CREATE' | 'PENDING_UPDATE' | 'PENDING_DELETE';
 
-export type EntityType = 'CUSTOMER' | 'BUYER' | 'INVOICE' | 'INVOICE_ITEM';
+export type EntityType = 'CUSTOMER' | 'BUYER' | 'INVOICE' | 'INVOICE_ITEM' | 'PAYMENT';
 
 export interface LocalCustomer extends DbCustomer {
   sync_status: SyncStatus;
@@ -20,6 +20,11 @@ export interface LocalInvoice extends DbInvoice {
 }
 
 export interface LocalInvoiceItem extends DbInvoiceItem {
+  sync_status: SyncStatus;
+  local_updated_at: string;
+}
+
+export interface LocalPayment extends DbPayment {
   sync_status: SyncStatus;
   local_updated_at: string;
 }

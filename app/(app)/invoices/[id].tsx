@@ -27,7 +27,7 @@ import { useLanguage } from '@/src/localization';
 import { InvoiceDetail } from '@/src/types/invoice';
 import { DbInvoice, DbInvoiceItem, DbCustomer, DbBuyer, DbProfile } from '@/src/types/database';
 import { formatCurrency, paiseToRupees } from '@/src/utils';
-import { useDeleteInvoice, useRecordPayment } from '@/src/features/invoices';
+import { useDeleteInvoice, useRecordPayment, useInvoicePayments } from '@/src/features/invoices';
 import { pdfService } from '@/src/services/pdf.service';
 
 export default function InvoiceDetailScreen() {
@@ -41,15 +41,18 @@ export default function InvoiceDetailScreen() {
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [printing, setPrinting] = useState(false);
 
-  // Phase 16: Payment Update State
+  // Phase 16 & 17: Payment & Payment History State
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentAmountInput, setPaymentAmountInput] = useState('');
+  const [paymentDateInput, setPaymentDateInput] = useState('');
+  const [paymentNotesInput, setPaymentNotesInput] = useState('');
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [submittingPayment, setSubmittingPayment] = useState(false);
 
   const profile = useAuthStore(state => state.profile);
   const deleteInvoiceMutation = useDeleteInvoice();
   const recordPaymentMutation = useRecordPayment();
+  const { data: paymentHistory = [] } = useInvoicePayments((id as string) || '');
 
   useEffect(() => {
     async function loadInvoice() {
@@ -255,6 +258,8 @@ export default function InvoiceDetailScreen() {
       const res = await recordPaymentMutation.mutateAsync({
         invoiceId: invoice.id,
         paymentRupees: paymentNum,
+        paymentDate: paymentDateInput.trim() || undefined,
+        notes: paymentNotesInput.trim() || undefined,
       });
 
       if (res.error || !res.data) {
@@ -265,6 +270,8 @@ export default function InvoiceDetailScreen() {
       setInvoice(res.data);
       setIsPaymentModalOpen(false);
       setPaymentAmountInput('');
+      setPaymentDateInput('');
+      setPaymentNotesInput('');
 
       Alert.alert(
         t.common.success || 'Success',
@@ -571,6 +578,8 @@ export default function InvoiceDetailScreen() {
               variant="primary"
               onPress={() => {
                 setPaymentAmountInput('');
+                setPaymentDateInput(new Date().toISOString().split('T')[0]);
+                setPaymentNotesInput('');
                 setPaymentError(null);
                 setIsPaymentModalOpen(true);
               }}
@@ -585,9 +594,78 @@ export default function InvoiceDetailScreen() {
             </View>
           )}
         </AppCard>
+
+        {/* Phase 17: Payment History Card */}
+        <AppCard style={styles.card}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons
+                name="time-outline"
+                size={20}
+                color={colors.primary}
+                style={{ marginRight: 6 }}
+              />
+              <AppText variant="bodyLargeBold">
+                {t.invoices.paymentHistory || 'Payment History'} ({paymentHistory.length})
+              </AppText>
+            </View>
+          </View>
+
+          {paymentHistory.length === 0 ? (
+            <View style={styles.emptyHistoryBox}>
+              <Ionicons name="receipt-outline" size={28} color={colors.textMuted} />
+              <AppText
+                variant="body"
+                color={colors.textSecondary}
+                style={{ marginTop: 6, textAlign: 'center' }}
+              >
+                {t.invoices.noPayments || 'No payments recorded yet.'}
+              </AppText>
+            </View>
+          ) : (
+            paymentHistory.map((p, idx) => (
+              <View
+                key={p.id}
+                style={[
+                  styles.historyRow,
+                  idx < paymentHistory.length - 1 && styles.historyRowBorder,
+                ]}
+              >
+                <View style={{ flex: 1, paddingRight: spacing.sm }}>
+                  <AppText variant="bodyBold" color={colors.textPrimary}>
+                    {new Date(p.payment_date || p.created_at).toLocaleDateString('en-IN', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </AppText>
+                  <AppText
+                    variant="caption"
+                    color={colors.textSecondary}
+                    style={{ marginTop: 2 }}
+                    numberOfLines={1}
+                  >
+                    {p.notes || t.invoices.paymentReceived || 'Payment received'}
+                  </AppText>
+                </View>
+
+                <View style={{ alignItems: 'flex-end' }}>
+                  <AppText variant="bodyLargeBold" color={colors.jama}>
+                    +{formatCurrency(Number(p.amount))}
+                  </AppText>
+                  <View style={styles.receivedPill}>
+                    <AppText variant="caption" color={colors.jama}>
+                      ✓ {t.invoices.paymentReceived || 'Received'}
+                    </AppText>
+                  </View>
+                </View>
+              </View>
+            ))
+          )}
+        </AppCard>
       </ScrollView>
 
-      {/* Phase 16: Record Payment Modal */}
+      {/* Phase 16 & 17: Record Payment Modal */}
       <Modal
         visible={isPaymentModalOpen}
         animationType="slide"
@@ -664,6 +742,9 @@ export default function InvoiceDetailScreen() {
               style={styles.quickFillBtn}
               onPress={() => {
                 setPaymentAmountInput(paiseToRupees(Number(invoice.remaining_amount)).toString());
+                if (!paymentDateInput) {
+                  setPaymentDateInput(new Date().toISOString().split('T')[0]);
+                }
                 setPaymentError(null);
               }}
             >
@@ -673,6 +754,25 @@ export default function InvoiceDetailScreen() {
                 {formatCurrency(Number(invoice.remaining_amount))})
               </AppText>
             </TouchableOpacity>
+
+            {/* Payment Date Input */}
+            <AppTextInput
+              label={t.invoices.paymentDate || 'Payment Date (YYYY-MM-DD)'}
+              placeholder="YYYY-MM-DD"
+              value={paymentDateInput}
+              onChangeText={text => {
+                setPaymentDateInput(text);
+                if (paymentError) setPaymentError(null);
+              }}
+            />
+
+            {/* Payment Notes Input */}
+            <AppTextInput
+              label={t.invoices.paymentNotes || 'Notes / Mode (Optional)'}
+              placeholder={t.invoices.paymentNotesPlaceholder || 'e.g. Cash, UPI, Cheque...'}
+              value={paymentNotesInput}
+              onChangeText={text => setPaymentNotesInput(text)}
+            />
 
             {/* Modal Actions */}
             <View style={styles.modalActionsRow}>
@@ -852,5 +952,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     marginTop: spacing.xs,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  emptyHistoryBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+  },
+  historyRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  historyRowBorder: {
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.borderLight,
+  },
+  receivedPill: {
+    backgroundColor: colors.jamaBackground,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+    marginTop: 2,
   },
 });

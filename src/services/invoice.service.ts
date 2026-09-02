@@ -1,9 +1,9 @@
 import * as Crypto from 'expo-crypto';
 import { supabase } from './supabase/client';
 import { localStore } from '@/src/database/localStore';
-import { LocalInvoice, LocalInvoiceItem } from '@/src/database/types';
+import { LocalInvoice, LocalInvoiceItem, LocalPayment } from '@/src/database/types';
 import { InvoiceSummary, InvoiceDetail, InvoiceFormData } from '@/src/types/invoice';
-import { PartyType } from '@/src/types/database';
+import { PartyType, DbPayment } from '@/src/types/database';
 import { rupeesToPaise } from '@/src/utils';
 import { syncService } from './sync.service';
 import { networkService } from './network.service';
@@ -533,17 +533,56 @@ export const invoiceService = {
   },
 
   /**
-   * Record payment (Jama) received from Customer or Buyer against an existing invoice (Phase 16)
+   * Fetch payment history for a specific invoice, ordered newest first (Phase 17)
+   */
+  async getInvoicePayments(invoiceId: string): Promise<DbPayment[]> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) return [];
+    const userId = userData.user.id;
+
+    // Background pull if online
+    if (networkService.isOnline()) {
+      try {
+        const { data: serverPayments } = await (supabase.from('payments') as any)
+          .select('*')
+          .eq('invoice_id', invoiceId)
+          .eq('user_id', userId)
+          .order('payment_date', { ascending: false })
+          .order('created_at', { ascending: false });
+
+        if (serverPayments) {
+          await localStore.bulkUpsertPayments(
+            userId,
+            serverPayments.map((p: DbPayment) => ({
+              ...p,
+              sync_status: 'SYNCED',
+              local_updated_at: p.updated_at || p.created_at,
+            })),
+          );
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    return localStore.getPayments(userId, invoiceId);
+  },
+
+  /**
+   * Record payment (Jama) received from Customer or Buyer against an existing invoice (Phase 16 & 17)
    * Enforces:
    * 1. paymentRupees > 0
    * 2. paymentPaise <= existing.remaining_amount
-   * 3. Accumulates to existing.paid_amount
-   * 4. Derives new remaining_amount = total_amount - new_paid_amount
-   * 5. Atomically saves to localStore and enqueues sync
+   * 3. Creates payment record in payments table with stable ID
+   * 4. Accumulates to existing.paid_amount
+   * 5. Derives new remaining_amount = total_amount - new_paid_amount
+   * 6. Atomically saves to localStore and enqueues sync for both payment & invoice
    */
   async recordPayment(
     invoiceId: string,
     paymentRupees: number,
+    paymentDate?: string,
+    notes?: string,
   ): Promise<InvoiceOperationResult<InvoiceDetail>> {
     try {
       const { data: userData } = await supabase.auth.getUser();
@@ -595,6 +634,22 @@ export const invoiceService = {
       const newPaidPaise = currentPaid + paymentPaise;
       const newRemainingPaise = Math.max(0, Number(existing.total_amount) - newPaidPaise);
       const now = new Date().toISOString();
+      const effectivePaymentDate = paymentDate || now.split('T')[0];
+
+      // 1. Create Payment Record (Phase 17)
+      const paymentId = Crypto.randomUUID();
+      const paymentRecord: LocalPayment = {
+        id: paymentId,
+        user_id: userId,
+        invoice_id: invoiceId,
+        amount: paymentPaise,
+        payment_date: effectivePaymentDate,
+        notes: notes?.trim() || null,
+        created_at: now,
+        updated_at: now,
+        sync_status: 'PENDING_CREATE',
+        local_updated_at: now,
+      };
 
       const updatedInvoice: LocalInvoice = {
         ...existing,
@@ -605,10 +660,30 @@ export const invoiceService = {
         local_updated_at: now,
       };
 
-      // 1. Atomic local database update
+      // 2. Atomic local database update
+      await localStore.upsertPayment(userId, paymentRecord);
       await localStore.upsertInvoice(userId, updatedInvoice);
 
-      // 2. Enqueue mutation
+      // 3. Enqueue payment sync mutation
+      await localStore.enqueueSyncItem(userId, {
+        id: Crypto.randomUUID(),
+        user_id: userId,
+        entity: 'PAYMENT',
+        entity_id: paymentId,
+        operation: 'CREATE',
+        payload: {
+          id: paymentId,
+          user_id: userId,
+          invoice_id: invoiceId,
+          amount: paymentPaise,
+          payment_date: effectivePaymentDate,
+          notes: notes?.trim() || null,
+        },
+        created_at: now,
+        retry_count: 0,
+      });
+
+      // 4. Enqueue invoice sync mutation
       await localStore.enqueueSyncItem(userId, {
         id: Crypto.randomUUID(),
         user_id: userId,
@@ -629,7 +704,7 @@ export const invoiceService = {
         retry_count: 0,
       });
 
-      // 3. Trigger sync if online
+      // 5. Trigger sync if online
       if (networkService.isOnline()) {
         syncService.processQueue(userId).catch(() => {});
       }

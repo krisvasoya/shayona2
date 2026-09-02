@@ -100,6 +100,12 @@ export const translations = {
       cannotExceedBaki: 'Payment cannot exceed remaining Baki amount.',
       mustBeGreaterThanZero: 'Payment must be greater than zero.',
       alreadyFullyPaid: 'This invoice is already fully paid.',
+      paymentHistory: 'Payment History',
+      noPayments: 'No payments recorded yet.',
+      paymentReceived: 'Payment received',
+      paymentDate: 'Payment Date (YYYY-MM-DD)',
+      paymentNotes: 'Payment Notes / Mode (Optional)',
+      paymentNotesPlaceholder: 'e.g. Cash, UPI, Cheque, GPay...',
     },
 
     // Create / Edit Invoice
@@ -318,9 +324,15 @@ export const translations = {
       payFullBaki: 'સંપૂર્ણ બાકી ચૂકવો',
       savePayment: 'ચુકવણી સાચવો',
       paymentSuccess: 'ચુકવણી સફળતાપૂર્વક સાચવવામાં આવી!',
-      cannotExceedBaki: 'ચુકવણી બાકી રકમ કરતાં વધુ ન હોઈ શકે.',
-      mustBeGreaterThanZero: 'ચુકવણી શૂન્ય કરતાં વધુ હોવી જોઈએ.',
-      alreadyFullyPaid: 'આ બિલ સંપૂર્ણપણે ચૂકવેલ છે.',
+      cannotExceedBaki: 'ચુકવણી બાકી રકમ કરતા વધારે હોઈ શકે નહીં.',
+      mustBeGreaterThanZero: 'ચુકવણી શૂન્ય કરતા વધારે હોવી જોઈએ.',
+      alreadyFullyPaid: 'આ બિલ પહેલેથી જ સંપૂર્ણ ચૂકવાયેલ છે.',
+      paymentHistory: 'ચુકવણી ઇતિહાસ (Payment History)',
+      noPayments: 'હજુ સુધી કોઈ ચુકવણી નોંધાયેલ નથી.',
+      paymentReceived: 'ચુકવણી પ્રાપ્ત',
+      paymentDate: 'ચુકવણી તારીખ (YYYY-MM-DD)',
+      paymentNotes: 'ચુકવણી નોંધ / માધ્યમ (વૈકલ્પિક)',
+      paymentNotesPlaceholder: 'દા.ત. રોકડ, UPI, ચેક...',
     },
 
     // Create / Edit Invoice

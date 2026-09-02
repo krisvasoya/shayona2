@@ -177,6 +177,38 @@ export interface Database {
           created_at?: string;
         };
       };
+      payments: {
+        Row: {
+          id: string;
+          user_id: string;
+          invoice_id: string;
+          amount: number; // in Paise
+          payment_date: string; // YYYY-MM-DD
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          invoice_id: string;
+          amount: number; // in Paise
+          payment_date?: string;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          invoice_id?: string;
+          amount?: number;
+          payment_date?: string;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
   };
 }
@@ -186,3 +218,4 @@ export type DbCustomer = Database['public']['Tables']['customers']['Row'];
 export type DbBuyer = Database['public']['Tables']['buyers']['Row'];
 export type DbInvoice = Database['public']['Tables']['invoices']['Row'];
 export type DbInvoiceItem = Database['public']['Tables']['invoice_items']['Row'];
+export type DbPayment = Database['public']['Tables']['payments']['Row'];
