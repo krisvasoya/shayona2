@@ -2,7 +2,13 @@
   "expo": {
     "name": "Shayona Invoice",
     "slug": "shayona-invoice",
-    "version": "1.0.0",
+    "version": "1.0.1",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/cda2f500-7995-4180-8872-40fb52832ae7"
+    },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "shayonainvoice",
@@ -18,7 +24,7 @@
     },
     "android": {
       "package": "com.shayona.invoice",
-      "versionCode": 1,
+      "versionCode": 2,
       "softwareKeyboardLayoutMode": "pan",
       "adaptiveIcon": {
         "backgroundColor": "#1E293B",
