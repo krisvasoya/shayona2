@@ -1,8 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/src/services/supabase/client';
+import { useDeleteInvoice } from '@/src/features/invoices';
 import { AppScreenContainer, AppText, AppCard, AppButton, AppBadge } from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
@@ -21,6 +29,8 @@ export default function InvoiceDetailScreen() {
   const [invoice, setInvoice] = useState<InvoiceFullDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const deleteInvoiceMutation = useDeleteInvoice();
 
   useEffect(() => {
     async function loadInvoice() {
@@ -45,7 +55,8 @@ export default function InvoiceDetailScreen() {
         // Fetch invoice line items
         const { data: items } = await (supabase.from('invoice_items') as any)
           .select('*')
-          .eq('invoice_id', typedInv.id);
+          .eq('invoice_id', typedInv.id)
+          .order('created_at', { ascending: true });
 
         // Fetch party name
         let partyName = 'Customer';
@@ -79,6 +90,30 @@ export default function InvoiceDetailScreen() {
       loadInvoice();
     }
   }, [id]);
+
+  const handleDeleteInvoice = () => {
+    if (!invoice) return;
+
+    Alert.alert(
+      'Delete Invoice',
+      `Are you sure you want to delete Bill #${invoice.invoice_number}? This will remove the bill from ledger records.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const res = await deleteInvoiceMutation.mutateAsync(invoice.id);
+            if (!res.success) {
+              Alert.alert('Error', res.error || 'Failed to delete invoice.');
+            } else {
+              router.back();
+            }
+          },
+        },
+      ],
+    );
+  };
 
   if (loading) {
     return (
@@ -129,10 +164,23 @@ export default function InvoiceDetailScreen() {
           Bill #{invoice.invoice_number}
         </AppText>
 
-        <AppBadge
-          label={isPaid ? 'PAID' : hasBaki ? 'BAKI DUE' : 'UNPAID'}
-          variant={isPaid ? 'success' : 'danger'}
-        />
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: '/(app)/invoices/create' as any,
+                params: { id: invoice.id },
+              })
+            }
+            style={styles.actionIconBtn}
+          >
+            <Ionicons name="create-outline" size={22} color={colors.primary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={handleDeleteInvoice} style={styles.actionIconBtn}>
+            <Ionicons name="trash-outline" size={22} color={colors.danger} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -160,8 +208,33 @@ export default function InvoiceDetailScreen() {
             </View>
           </View>
 
+          <View
+            style={{
+              marginTop: spacing.sm,
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <AppBadge
+              label={invoice.party_type === 'CUSTOMER' ? 'Customer Bill' : 'Wholesale Buyer Bill'}
+              variant="neutral"
+            />
+            <AppBadge
+              label={isPaid ? 'FULLY PAID' : hasBaki ? 'PENDING BAKI' : 'UNPAID'}
+              variant={isPaid ? 'success' : 'danger'}
+            />
+          </View>
+
           {invoice.notes && (
-            <View style={{ marginTop: spacing.sm }}>
+            <View
+              style={{
+                marginTop: spacing.sm,
+                paddingTop: spacing.xs,
+                borderTopWidth: 0.5,
+                borderTopColor: colors.border,
+              }}
+            >
               <AppText variant="caption" color={colors.textSecondary}>
                 NOTES
               </AppText>
@@ -175,7 +248,7 @@ export default function InvoiceDetailScreen() {
         {/* Itemized Table */}
         <AppCard style={styles.card}>
           <AppText variant="bodyLargeBold" style={{ marginBottom: spacing.sm }}>
-            Items ({invoice.items.length})
+            Itemized Bill ({invoice.items.length})
           </AppText>
 
           <View style={styles.tableHeader}>
@@ -293,6 +366,14 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     marginHorizontal: spacing.sm,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  actionIconBtn: {
+    padding: spacing.xs,
   },
   scrollContent: {
     paddingBottom: spacing.xxl,
