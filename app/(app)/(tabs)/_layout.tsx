@@ -1,4 +1,5 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/src/theme/colors';
@@ -13,13 +14,13 @@ export default function TabLayout() {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 8,
+          height: Platform.OS === 'android' ? 66 : 60,
+          paddingBottom: Platform.OS === 'android' ? 10 : 6,
+          paddingTop: 6,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
+          fontSize: 11,
+          fontWeight: '600',
         },
         headerShown: false,
       }}

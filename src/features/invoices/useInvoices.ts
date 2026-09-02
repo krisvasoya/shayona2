@@ -41,6 +41,7 @@ export function useCreateInvoice() {
     onSuccess: result => {
       if (result.data) {
         queryClient.invalidateQueries({ queryKey: INVOICES_QUERY_KEY });
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
         queryClient.invalidateQueries({ queryKey: CUSTOMERS_QUERY_KEY });
         queryClient.invalidateQueries({ queryKey: BUYERS_QUERY_KEY });
         queryClient.invalidateQueries({ queryKey: ['next-invoice-number'] });
@@ -57,6 +58,7 @@ export function useUpdateInvoice() {
       invoiceService.updateInvoice(invoiceId, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: INVOICES_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['invoice', variables.invoiceId] });
       queryClient.invalidateQueries({ queryKey: CUSTOMERS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: BUYERS_QUERY_KEY });
@@ -71,6 +73,7 @@ export function useDeleteInvoice() {
     mutationFn: (invoiceId: string) => invoiceService.deleteInvoice(invoiceId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: INVOICES_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: CUSTOMERS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: BUYERS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ['next-invoice-number'] });

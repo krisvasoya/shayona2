@@ -6,9 +6,9 @@ import {
   StyleProp,
   ViewStyle,
   StatusBar,
-  SafeAreaView,
   Platform,
 } from 'react-native';
+import { SafeAreaView, NativeSafeAreaViewProps } from 'react-native-safe-area-context';
 import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
 
@@ -19,7 +19,7 @@ export interface AppScreenContainerProps {
   style?: StyleProp<ViewStyle>;
   contentContainerStyle?: StyleProp<ViewStyle>;
   backgroundColor?: string;
-  edges?: ('top' | 'bottom' | 'left' | 'right')[];
+  edges?: NativeSafeAreaViewProps['edges'];
 }
 
 export const AppScreenContainer: React.FC<AppScreenContainerProps> = ({
@@ -29,9 +29,10 @@ export const AppScreenContainer: React.FC<AppScreenContainerProps> = ({
   style,
   contentContainerStyle,
   backgroundColor = colors.background,
+  edges = ['top'],
 }) => {
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
+    <SafeAreaView edges={edges} style={[styles.safeArea, { backgroundColor }]}>
       <StatusBar
         barStyle="dark-content"
         backgroundColor={Platform.OS === 'android' ? colors.surface : undefined}
@@ -62,9 +63,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.screenPadding,
+    paddingBottom: 100, // Safe clearance for bottom tab bar
     flexGrow: 1,
   },
   nonScrollContent: {
     padding: spacing.screenPadding,
+    paddingBottom: 100,
   },
 });
