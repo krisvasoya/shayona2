@@ -2,8 +2,6 @@
  * Indian Mobile Number Validation and Normalization Utilities
  */
 
-export const PHONE_AUTH_DOMAIN = 'phone.shayona.internal';
-
 /**
  * Checks if a string is a valid Indian 10-digit mobile number.
  * Valid Indian mobile numbers:
@@ -73,31 +71,4 @@ export function formatPhoneDisplay(raw: string): string {
     return `+91 ${tenDigits.slice(0, 5)} ${tenDigits.slice(5)}`;
   }
   return raw;
-}
-
-/**
- * Maps a 10-digit Indian mobile number to a zero-cost Supabase Auth identity:
- * e.g. "9876543210" -> "9876543210@phone.shayona.internal"
- */
-export function phoneToSyntheticEmail(rawPhone: string): string {
-  const tenDigits = extract10DigitPhone(rawPhone);
-  return `${tenDigits}@${PHONE_AUTH_DOMAIN}`;
-}
-
-/**
- * Checks if an email is a synthetic phone identity
- */
-export function isSyntheticPhoneEmail(email?: string | null): boolean {
-  if (!email) return false;
-  return email.endsWith(`@${PHONE_AUTH_DOMAIN}`);
-}
-
-/**
- * Extracts the 10-digit mobile number from a synthetic email
- */
-export function syntheticEmailToPhone(email: string): string {
-  if (isSyntheticPhoneEmail(email)) {
-    return email.split('@')[0];
-  }
-  return email;
 }

@@ -8,8 +8,27 @@ export function mapAuthError(error: unknown): string {
 
   const message = (error as { message?: string }).message || String(error);
   const status = (error as { status?: number }).status;
+  const code = (error as { code?: string }).code;
 
   const lower = message.toLowerCase();
+
+  // Phone provider not enabled in Supabase
+  if (
+    lower.includes('phone signups are disabled') ||
+    lower.includes('phone_provider_disabled') ||
+    code === 'phone_provider_disabled'
+  ) {
+    return 'Phone authentication is not enabled in your Supabase project. Please enable the Phone provider in Supabase Dashboard (Authentication > Providers > Phone).';
+  }
+
+  // Unsupported provider / Provider not enabled (e.g. Google)
+  if (
+    lower.includes('unsupported provider') ||
+    lower.includes('provider is not enabled') ||
+    lower.includes('provider_disabled')
+  ) {
+    return 'This authentication provider is not enabled in your Supabase project. Please enable it in Supabase Dashboard (Authentication > Providers).';
+  }
 
   // Invalid login credentials
   if (
@@ -25,7 +44,8 @@ export function mapAuthError(error: unknown): string {
   if (
     lower.includes('user already registered') ||
     lower.includes('already exists') ||
-    lower.includes('phone number already in use')
+    lower.includes('phone number already in use') ||
+    lower.includes('phone_exists')
   ) {
     return 'An account with this mobile number already exists. Please login instead.';
   }

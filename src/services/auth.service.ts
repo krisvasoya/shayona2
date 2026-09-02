@@ -2,12 +2,7 @@ import { makeRedirectUri } from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from './supabase/client';
 import { authStorage } from './supabase/storage';
-import {
-  normalizePhoneE164,
-  phoneToSyntheticEmail,
-  isSyntheticPhoneEmail,
-  syntheticEmailToPhone,
-} from '@/src/utils/phone';
+import { normalizePhoneE164, extract10DigitPhone } from '@/src/utils/phone';
 import { mapAuthError } from '@/src/features/auth/errors';
 import { User, Session } from '@supabase/supabase-js';
 
@@ -32,15 +27,14 @@ export interface AuthResult {
 export const authService = {
   /**
    * Register a new user with Shop Name, Mobile Number and Password
-   * (Zero-cost native Supabase Auth engine)
+   * (Native Supabase Phone Auth)
    */
   async signUpWithPhone(shopName: string, rawPhone: string, password: string): Promise<AuthResult> {
     try {
-      const syntheticEmail = phoneToSyntheticEmail(rawPhone);
       const normalizedPhone = normalizePhoneE164(rawPhone);
 
       const { data, error } = await supabase.auth.signUp({
-        email: syntheticEmail,
+        phone: normalizedPhone,
         password,
         options: {
           data: {
@@ -82,7 +76,7 @@ export const authService = {
       try {
         await (supabase.from('profiles') as any).upsert(profileData, { onConflict: 'id' });
       } catch {
-        // Profile table might not be initialized yet in early Phase 2 before DB migration
+        // Fallback handled by profiles trigger / initial migration
       }
 
       return {
@@ -102,6 +96,7 @@ export const authService = {
 
   /**
    * Login with Mobile Number and Password
+   * (Native Supabase Phone Auth)
    */
   async signInWithPhone(
     rawPhone: string,
@@ -109,13 +104,13 @@ export const authService = {
     rememberMe = true,
   ): Promise<AuthResult> {
     try {
-      const syntheticEmail = phoneToSyntheticEmail(rawPhone);
+      const normalizedPhone = normalizePhoneE164(rawPhone);
 
       // Save Remember Me preference
       await authStorage.setRememberMe(rememberMe);
 
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: syntheticEmail,
+        phone: normalizedPhone,
         password,
       });
 
@@ -248,13 +243,15 @@ export const authService = {
   },
 
   /**
-   * Request password recovery for mobile number
+   * Request password recovery for mobile number via SMS OTP
    */
   async requestPasswordResetOtp(rawPhone: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const syntheticEmail = phoneToSyntheticEmail(rawPhone);
+      const normalizedPhone = normalizePhoneE164(rawPhone);
 
-      const { error } = await supabase.auth.resetPasswordForEmail(syntheticEmail);
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: normalizedPhone,
+      });
 
       if (error) {
         return { success: false, error: mapAuthError(error) };
@@ -267,7 +264,7 @@ export const authService = {
   },
 
   /**
-   * Verify OTP / Recovery token and update password
+   * Verify OTP and update password
    */
   async verifyOtpAndResetPassword(
     rawPhone: string,
@@ -275,13 +272,13 @@ export const authService = {
     newPassword: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const syntheticEmail = phoneToSyntheticEmail(rawPhone);
+      const normalizedPhone = normalizePhoneE164(rawPhone);
 
-      // Verify recovery token
+      // Verify OTP token for phone
       const { error: verifyError } = await supabase.auth.verifyOtp({
-        email: syntheticEmail,
+        phone: normalizedPhone,
         token: otp.trim(),
-        type: 'recovery',
+        type: 'sms',
       });
 
       if (verifyError) {
@@ -325,8 +322,8 @@ export const authService = {
 
     let displayPhone =
       userFallback?.phone || (userFallback?.user_metadata?.phone as string) || null;
-    if (!displayPhone && isSyntheticPhoneEmail(userFallback?.email)) {
-      displayPhone = `+91${syntheticEmailToPhone(userFallback?.email || '')}`;
+    if (displayPhone) {
+      displayPhone = `+91${extract10DigitPhone(displayPhone)}`;
     }
 
     return {
