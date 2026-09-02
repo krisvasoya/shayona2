@@ -5,11 +5,7 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  Modal,
-  ScrollView,
   ActivityIndicator,
-  Platform,
-  KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +17,7 @@ import {
   AppButton,
   AppTextInput,
   AppBadge,
+  AppModal,
 } from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
@@ -274,85 +271,62 @@ export default function CustomersScreen() {
       )}
 
       {/* Add Customer Modal */}
-      <Modal
+      <AppModal
         visible={isAddModalOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setIsAddModalOpen(false)}
+        title={t.customers.createCustomerTitle}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          resetForm();
+        }}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.modalOverlay}
-        >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <AppText variant="h3">{t.customers.createCustomerTitle}</AppText>
-              <TouchableOpacity
-                onPress={() => {
-                  setIsAddModalOpen(false);
-                  resetForm();
-                }}
-              >
-                <Ionicons name="close" size={24} color={colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
+        <AppTextInput
+          label={`${t.customers.customerName} *`}
+          placeholder="e.g. Ramesh Patel"
+          value={name}
+          onChangeText={setName}
+          error={formErrors.name}
+          autoFocus
+        />
 
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="on-drag"
-            >
-              <AppTextInput
-                label={`${t.customers.customerName} *`}
-                placeholder="e.g. Ramesh Patel"
-                value={name}
-                onChangeText={setName}
-                error={formErrors.name}
-                autoFocus
-              />
+        <AppTextInput
+          label={t.customers.phoneNumber}
+          placeholder="10-digit mobile number"
+          value={phone}
+          onChangeText={setPhone}
+          keyboardType="phone-pad"
+          maxLength={10}
+          error={formErrors.phone}
+        />
 
-              <AppTextInput
-                label={t.customers.phoneNumber}
-                placeholder="10-digit mobile number"
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-                maxLength={10}
-                error={formErrors.phone}
-              />
+        <AppTextInput
+          label={t.customers.address}
+          placeholder="Shop address, village, or area"
+          value={address}
+          onChangeText={setAddress}
+          multiline
+          numberOfLines={3}
+          error={formErrors.address}
+        />
 
-              <AppTextInput
-                label={t.customers.address}
-                placeholder="Shop address, village, or area"
-                value={address}
-                onChangeText={setAddress}
-                multiline
-                numberOfLines={3}
-                error={formErrors.address}
-              />
-
-              <View style={styles.modalActionRow}>
-                <AppButton
-                  title={t.common.cancel}
-                  variant="outline"
-                  onPress={() => {
-                    setIsAddModalOpen(false);
-                    resetForm();
-                  }}
-                  style={styles.modalBtn}
-                />
-                <AppButton
-                  title={t.customers.saveCustomer}
-                  variant="primary"
-                  loading={createCustomerMutation.isPending}
-                  onPress={handleCreateCustomer}
-                  style={styles.modalBtn}
-                />
-              </View>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+        <View style={styles.modalActionRow}>
+          <AppButton
+            title={t.common.cancel}
+            variant="outline"
+            onPress={() => {
+              setIsAddModalOpen(false);
+              resetForm();
+            }}
+            style={styles.modalBtn}
+          />
+          <AppButton
+            title={t.customers.saveCustomer}
+            variant="primary"
+            loading={createCustomerMutation.isPending}
+            onPress={handleCreateCustomer}
+            style={styles.modalBtn}
+          />
+        </View>
+      </AppModal>
     </AppScreenContainer>
   );
 }

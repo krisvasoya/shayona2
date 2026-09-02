@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Modal } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -11,6 +11,7 @@ import {
   AppBadge,
   AppButton,
   AppTextInput,
+  AppModal,
 } from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
@@ -405,66 +406,54 @@ export default function SettingsScreen() {
       </AppCard>
 
       {/* Restore Data Modal */}
-      <Modal
+      <AppModal
         visible={isRestoreModalOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => {
+        title={t.settings.restoreTitle || 'Restore Backup Data'}
+        onClose={() => {
           if (!restoring) setIsRestoreModalOpen(false);
         }}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <AppText variant="h3">{t.settings.restoreTitle || 'Restore Backup Data'}</AppText>
-              <TouchableOpacity disabled={restoring} onPress={() => setIsRestoreModalOpen(false)}>
-                <Ionicons name="close" size={24} color={colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
+        <AppText
+          variant="caption"
+          color={colors.textSecondary}
+          style={{ marginBottom: spacing.md }}
+        >
+          {t.settings.restoreWarning ||
+            'Restoring data will merge verified backup records with your current account.'}
+        </AppText>
 
-            <AppText
-              variant="caption"
-              color={colors.textSecondary}
-              style={{ marginBottom: spacing.md }}
-            >
-              {t.settings.restoreWarning ||
-                'Restoring data will merge verified backup records with your current account.'}
-            </AppText>
+        <AppTextInput
+          label={t.settings.pasteBackupLabel || 'Paste Backup JSON Data *'}
+          placeholder='{"backupVersion": 1, ...}'
+          value={restoreJsonInput}
+          onChangeText={text => {
+            setRestoreJsonInput(text);
+            if (restoreError) setRestoreError(null);
+          }}
+          multiline
+          numberOfLines={6}
+          style={{ height: 120, textAlignVertical: 'top' }}
+          error={restoreError || undefined}
+        />
 
-            <AppTextInput
-              label={t.settings.pasteBackupLabel || 'Paste Backup JSON Data *'}
-              placeholder='{"backupVersion": 1, ...}'
-              value={restoreJsonInput}
-              onChangeText={text => {
-                setRestoreJsonInput(text);
-                if (restoreError) setRestoreError(null);
-              }}
-              multiline
-              numberOfLines={6}
-              style={{ height: 120, textAlignVertical: 'top' }}
-              error={restoreError || undefined}
-            />
-
-            <View style={styles.modalActionsRow}>
-              <AppButton
-                title={t.common.cancel}
-                variant="outline"
-                style={{ flex: 1 }}
-                disabled={restoring}
-                onPress={() => setIsRestoreModalOpen(false)}
-              />
-              <AppButton
-                title={t.settings.restoreConfirmBtn || 'Confirm & Restore'}
-                variant="primary"
-                style={{ flex: 1 }}
-                loading={restoring}
-                disabled={restoring || !restoreJsonInput.trim()}
-                onPress={handleConfirmRestore}
-              />
-            </View>
-          </View>
+        <View style={styles.modalActionsRow}>
+          <AppButton
+            title={t.common.cancel}
+            variant="outline"
+            style={{ flex: 1 }}
+            disabled={restoring}
+            onPress={() => setIsRestoreModalOpen(false)}
+          />
+          <AppButton
+            title={t.settings.restoreConfirmBtn || 'Confirm & Restore'}
+            variant="primary"
+            style={{ flex: 1 }}
+            loading={restoring}
+            disabled={restoring || !restoreJsonInput.trim()}
+            onPress={handleConfirmRestore}
+          />
         </View>
-      </Modal>
+      </AppModal>
     </AppScreenContainer>
   );
 }

@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Modal,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +16,7 @@ import {
   AppBadge,
   AppButton,
   AppTextInput,
+  AppModal,
 } from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
@@ -564,135 +564,117 @@ export default function InvoiceDetailScreen() {
       </ScrollView>
 
       {/* Phase 16 & 17: Record Payment Modal */}
-      <Modal
+      <AppModal
         visible={isPaymentModalOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => {
+        title={t.invoices.recordPaymentTitle || 'Record Payment (Jama)'}
+        onClose={() => {
           if (!submittingPayment) setIsPaymentModalOpen(false);
         }}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            {/* Modal Header */}
-            <View style={styles.modalHeader}>
-              <AppText variant="h3">
-                {t.invoices.recordPaymentTitle || 'Record Payment (Jama)'}
-              </AppText>
-              <TouchableOpacity
-                disabled={submittingPayment}
-                onPress={() => setIsPaymentModalOpen(false)}
-              >
-                <Ionicons name="close" size={24} color={colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
+        {/* Financial Summary Strip */}
+        <View style={styles.paymentSummaryCard}>
+          <View style={styles.summaryItem}>
+            <AppText variant="caption" color={colors.textSecondary}>
+              {t.invoices.totalAmount}
+            </AppText>
+            <AppText variant="bodyBold">{formatCurrency(Number(invoice.total_amount))}</AppText>
+          </View>
 
-            {/* Financial Summary Strip */}
-            <View style={styles.paymentSummaryCard}>
-              <View style={styles.summaryItem}>
-                <AppText variant="caption" color={colors.textSecondary}>
-                  {t.invoices.totalAmount}
-                </AppText>
-                <AppText variant="bodyBold">{formatCurrency(Number(invoice.total_amount))}</AppText>
-              </View>
+          <View style={styles.summaryDivider} />
 
-              <View style={styles.summaryDivider} />
+          <View style={styles.summaryItem}>
+            <AppText variant="caption" color={colors.jama}>
+              {t.dashboard.jamaReceived || 'Jama'}
+            </AppText>
+            <AppText variant="bodyBold" color={colors.jama}>
+              {formatCurrency(Number(invoice.paid_amount))}
+            </AppText>
+          </View>
 
-              <View style={styles.summaryItem}>
-                <AppText variant="caption" color={colors.jama}>
-                  {t.dashboard.jamaReceived || 'Jama'}
-                </AppText>
-                <AppText variant="bodyBold" color={colors.jama}>
-                  {formatCurrency(Number(invoice.paid_amount))}
-                </AppText>
-              </View>
+          <View style={styles.summaryDivider} />
 
-              <View style={styles.summaryDivider} />
-
-              <View style={styles.summaryItem}>
-                <AppText variant="caption" color={colors.baki}>
-                  {t.dashboard.bakiPending || 'Baki'}
-                </AppText>
-                <AppText variant="bodyBold" color={colors.baki}>
-                  {formatCurrency(Number(invoice.remaining_amount))}
-                </AppText>
-              </View>
-            </View>
-
-            {/* Payment Input */}
-            <AppTextInput
-              label={t.invoices.paymentAmount || 'Payment Received (₹) *'}
-              placeholder="e.g. 10000"
-              value={paymentAmountInput}
-              onChangeText={text => {
-                setPaymentAmountInput(text);
-                if (paymentError) setPaymentError(null);
-              }}
-              keyboardType="decimal-pad"
-              error={paymentError || undefined}
-              autoFocus
-            />
-
-            {/* Quick Fill Button: Pay Full Baki */}
-            <TouchableOpacity
-              activeOpacity={0.7}
-              disabled={submittingPayment}
-              style={styles.quickFillBtn}
-              onPress={() => {
-                setPaymentAmountInput(paiseToRupees(Number(invoice.remaining_amount)).toString());
-                if (!paymentDateInput) {
-                  setPaymentDateInput(new Date().toISOString().split('T')[0]);
-                }
-                setPaymentError(null);
-              }}
-            >
-              <Ionicons name="sparkles-outline" size={14} color={colors.accent} />
-              <AppText variant="captionBold" color={colors.accent} style={{ marginLeft: 4 }}>
-                {t.invoices.payFullBaki || 'Pay Full Baki'} (
-                {formatCurrency(Number(invoice.remaining_amount))})
-              </AppText>
-            </TouchableOpacity>
-
-            {/* Payment Date Input */}
-            <AppTextInput
-              label={t.invoices.paymentDate || 'Payment Date (YYYY-MM-DD)'}
-              placeholder="YYYY-MM-DD"
-              value={paymentDateInput}
-              onChangeText={text => {
-                setPaymentDateInput(text);
-                if (paymentError) setPaymentError(null);
-              }}
-            />
-
-            {/* Payment Notes Input */}
-            <AppTextInput
-              label={t.invoices.paymentNotes || 'Notes / Mode (Optional)'}
-              placeholder={t.invoices.paymentNotesPlaceholder || 'e.g. Cash, UPI, Cheque...'}
-              value={paymentNotesInput}
-              onChangeText={text => setPaymentNotesInput(text)}
-            />
-
-            {/* Modal Actions */}
-            <View style={styles.modalActionsRow}>
-              <AppButton
-                title={t.common.cancel}
-                variant="outline"
-                style={{ flex: 1 }}
-                disabled={submittingPayment}
-                onPress={() => setIsPaymentModalOpen(false)}
-              />
-              <AppButton
-                title={t.invoices.savePayment || 'Save Payment'}
-                variant="primary"
-                style={{ flex: 1 }}
-                loading={submittingPayment}
-                disabled={submittingPayment}
-                onPress={handleSavePayment}
-              />
-            </View>
+          <View style={styles.summaryItem}>
+            <AppText variant="caption" color={colors.baki}>
+              {t.dashboard.bakiPending || 'Baki'}
+            </AppText>
+            <AppText variant="bodyBold" color={colors.baki}>
+              {formatCurrency(Number(invoice.remaining_amount))}
+            </AppText>
           </View>
         </View>
-      </Modal>
+
+        {/* Payment Input */}
+        <AppTextInput
+          label={t.invoices.paymentAmount || 'Payment Received (₹) *'}
+          placeholder="e.g. 10000"
+          value={paymentAmountInput}
+          onChangeText={text => {
+            setPaymentAmountInput(text);
+            if (paymentError) setPaymentError(null);
+          }}
+          keyboardType="decimal-pad"
+          error={paymentError || undefined}
+          autoFocus
+        />
+
+        {/* Quick Fill Button: Pay Full Baki */}
+        <TouchableOpacity
+          activeOpacity={0.7}
+          disabled={submittingPayment}
+          style={styles.quickFillBtn}
+          onPress={() => {
+            setPaymentAmountInput(paiseToRupees(Number(invoice.remaining_amount)).toString());
+            if (!paymentDateInput) {
+              setPaymentDateInput(new Date().toISOString().split('T')[0]);
+            }
+            setPaymentError(null);
+          }}
+        >
+          <Ionicons name="sparkles-outline" size={14} color={colors.accent} />
+          <AppText variant="captionBold" color={colors.accent} style={{ marginLeft: 4 }}>
+            {t.invoices.payFullBaki || 'Pay Full Baki'} (
+            {formatCurrency(Number(invoice.remaining_amount))})
+          </AppText>
+        </TouchableOpacity>
+
+        {/* Payment Date Input */}
+        <AppTextInput
+          label={t.invoices.paymentDate || 'Payment Date (YYYY-MM-DD)'}
+          placeholder="YYYY-MM-DD"
+          value={paymentDateInput}
+          onChangeText={text => {
+            setPaymentDateInput(text);
+            if (paymentError) setPaymentError(null);
+          }}
+        />
+
+        {/* Payment Notes Input */}
+        <AppTextInput
+          label={t.invoices.paymentNotes || 'Notes / Mode (Optional)'}
+          placeholder={t.invoices.paymentNotesPlaceholder || 'e.g. Cash, UPI, Cheque...'}
+          value={paymentNotesInput}
+          onChangeText={text => setPaymentNotesInput(text)}
+        />
+
+        {/* Modal Actions */}
+        <View style={styles.modalActionsRow}>
+          <AppButton
+            title={t.common.cancel}
+            variant="outline"
+            style={{ flex: 1 }}
+            disabled={submittingPayment}
+            onPress={() => setIsPaymentModalOpen(false)}
+          />
+          <AppButton
+            title={t.invoices.savePayment || 'Save Payment'}
+            variant="primary"
+            style={{ flex: 1 }}
+            loading={submittingPayment}
+            disabled={submittingPayment}
+            onPress={handleSavePayment}
+          />
+        </View>
+      </AppModal>
     </AppScreenContainer>
   );
 }

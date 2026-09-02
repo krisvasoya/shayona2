@@ -6,10 +6,7 @@ import {
   TouchableOpacity,
   Alert,
   Linking,
-  Modal,
   ActivityIndicator,
-  Platform,
-  KeyboardAvoidingView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +17,7 @@ import {
   AppButton,
   AppTextInput,
   AppBadge,
+  AppModal,
 } from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
@@ -372,76 +370,55 @@ export default function BuyerDetailScreen() {
       </ScrollView>
 
       {/* Edit Buyer Modal */}
-      <Modal
+      <AppModal
         visible={isEditModalOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setIsEditModalOpen(false)}
+        title="Edit Buyer"
+        onClose={() => setIsEditModalOpen(false)}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.modalOverlay}
-        >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <AppText variant="h3">Edit Buyer</AppText>
-              <TouchableOpacity onPress={() => setIsEditModalOpen(false)}>
-                <Ionicons name="close" size={24} color={colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
+        <AppTextInput
+          label="Buyer / Business Name *"
+          placeholder="e.g. Mahavir Textiles"
+          value={editName}
+          onChangeText={setEditName}
+          error={formErrors.name}
+        />
 
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="on-drag"
-            >
-              <AppTextInput
-                label="Buyer / Business Name *"
-                placeholder="e.g. Mahavir Textiles"
-                value={editName}
-                onChangeText={setEditName}
-                error={formErrors.name}
-              />
+        <AppTextInput
+          label="Mobile Number (Optional)"
+          placeholder="10-digit mobile number"
+          value={editPhone}
+          onChangeText={setEditPhone}
+          keyboardType="phone-pad"
+          maxLength={10}
+          error={formErrors.phone}
+        />
 
-              <AppTextInput
-                label="Mobile Number (Optional)"
-                placeholder="10-digit mobile number"
-                value={editPhone}
-                onChangeText={setEditPhone}
-                keyboardType="phone-pad"
-                maxLength={10}
-                error={formErrors.phone}
-              />
+        <AppTextInput
+          label="Address / Market (Optional)"
+          placeholder="Shop number, market, or city"
+          value={editAddress}
+          onChangeText={setEditAddress}
+          multiline
+          numberOfLines={3}
+          error={formErrors.address}
+        />
 
-              <AppTextInput
-                label="Address / Market (Optional)"
-                placeholder="Shop number, market, or city"
-                value={editAddress}
-                onChangeText={setEditAddress}
-                multiline
-                numberOfLines={3}
-                error={formErrors.address}
-              />
-
-              <View style={styles.modalActionRow}>
-                <AppButton
-                  title="Cancel"
-                  variant="outline"
-                  onPress={() => setIsEditModalOpen(false)}
-                  style={styles.modalBtn}
-                />
-                <AppButton
-                  title="Update Buyer"
-                  variant="primary"
-                  loading={updateBuyerMutation.isPending}
-                  onPress={handleUpdateBuyer}
-                  style={styles.modalBtn}
-                />
-              </View>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+        <View style={styles.modalActionRow}>
+          <AppButton
+            title="Cancel"
+            variant="outline"
+            onPress={() => setIsEditModalOpen(false)}
+            style={styles.modalBtn}
+          />
+          <AppButton
+            title="Update Buyer"
+            variant="primary"
+            loading={updateBuyerMutation.isPending}
+            onPress={handleUpdateBuyer}
+            style={styles.modalBtn}
+          />
+        </View>
+      </AppModal>
     </AppScreenContainer>
   );
 }

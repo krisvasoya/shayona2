@@ -5,12 +5,8 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  Modal,
-  ScrollView,
   Alert,
   ActivityIndicator,
-  Platform,
-  KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +18,7 @@ import {
   AppButton,
   AppTextInput,
   AppBadge,
+  AppModal,
 } from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
@@ -256,85 +253,62 @@ export default function BuyersScreen() {
       )}
 
       {/* Add Buyer Modal */}
-      <Modal
+      <AppModal
         visible={isAddModalOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setIsAddModalOpen(false)}
+        title={t.buyers.createBuyerTitle}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          resetForm();
+        }}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.modalOverlay}
-        >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <AppText variant="h3">{t.buyers.createBuyerTitle}</AppText>
-              <TouchableOpacity
-                onPress={() => {
-                  setIsAddModalOpen(false);
-                  resetForm();
-                }}
-              >
-                <Ionicons name="close" size={24} color={colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
+        <AppTextInput
+          label={`${t.buyers.buyerName} *`}
+          placeholder="e.g. Mahavir Textiles"
+          value={name}
+          onChangeText={setName}
+          error={formErrors.name}
+          autoFocus
+        />
 
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="on-drag"
-            >
-              <AppTextInput
-                label={`${t.buyers.buyerName} *`}
-                placeholder="e.g. Mahavir Textiles"
-                value={name}
-                onChangeText={setName}
-                error={formErrors.name}
-                autoFocus
-              />
+        <AppTextInput
+          label={t.buyers.phoneNumber}
+          placeholder="10-digit mobile number"
+          value={phone}
+          onChangeText={setPhone}
+          keyboardType="phone-pad"
+          maxLength={10}
+          error={formErrors.phone}
+        />
 
-              <AppTextInput
-                label={t.buyers.phoneNumber}
-                placeholder="10-digit mobile number"
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-                maxLength={10}
-                error={formErrors.phone}
-              />
+        <AppTextInput
+          label={t.buyers.address}
+          placeholder="Shop address, market, or city"
+          value={address}
+          onChangeText={setAddress}
+          multiline
+          numberOfLines={3}
+          error={formErrors.address}
+        />
 
-              <AppTextInput
-                label={t.buyers.address}
-                placeholder="Shop address, market, or city"
-                value={address}
-                onChangeText={setAddress}
-                multiline
-                numberOfLines={3}
-                error={formErrors.address}
-              />
-
-              <View style={styles.modalActionRow}>
-                <AppButton
-                  title={t.common.cancel}
-                  variant="outline"
-                  onPress={() => {
-                    setIsAddModalOpen(false);
-                    resetForm();
-                  }}
-                  style={styles.modalBtn}
-                />
-                <AppButton
-                  title={t.buyers.saveBuyer}
-                  variant="primary"
-                  loading={createBuyerMutation.isPending}
-                  onPress={handleCreateBuyer}
-                  style={styles.modalBtn}
-                />
-              </View>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+        <View style={styles.modalActionRow}>
+          <AppButton
+            title={t.common.cancel}
+            variant="outline"
+            onPress={() => {
+              setIsAddModalOpen(false);
+              resetForm();
+            }}
+            style={styles.modalBtn}
+          />
+          <AppButton
+            title={t.buyers.saveBuyer}
+            variant="primary"
+            loading={createBuyerMutation.isPending}
+            onPress={handleCreateBuyer}
+            style={styles.modalBtn}
+          />
+        </View>
+      </AppModal>
     </AppScreenContainer>
   );
 }

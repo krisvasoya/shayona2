@@ -5,13 +5,18 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-  Modal,
   Alert,
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { AppScreenContainer, AppText, AppButton, AppTextInput } from '@/src/components/common';
+import {
+  AppScreenContainer,
+  AppText,
+  AppButton,
+  AppTextInput,
+  AppModal,
+} from '@/src/components/common';
 import { useDrawer } from '@/src/components/navigation/DrawerContext';
 import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
@@ -420,52 +425,40 @@ export default function DashboardScreen() {
       </ScrollView>
 
       {/* Custom Date Range Picker Modal */}
-      <Modal
+      <AppModal
         visible={isCustomModalOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setIsCustomModalOpen(false)}
+        title={t.dashboard.customRangeTitle}
+        onClose={() => setIsCustomModalOpen(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <AppText variant="h3">{t.dashboard.customRangeTitle}</AppText>
-              <TouchableOpacity onPress={() => setIsCustomModalOpen(false)}>
-                <Ionicons name="close" size={24} color={colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
+        <AppTextInput
+          label={t.dashboard.fromDate}
+          value={tempFrom}
+          onChangeText={setTempFrom}
+          placeholder="2026-09-01"
+        />
 
-            <AppTextInput
-              label={t.dashboard.fromDate}
-              value={tempFrom}
-              onChangeText={setTempFrom}
-              placeholder="2026-09-01"
-            />
+        <AppTextInput
+          label={t.dashboard.toDate}
+          value={tempTo}
+          onChangeText={setTempTo}
+          placeholder="2026-09-30"
+        />
 
-            <AppTextInput
-              label={t.dashboard.toDate}
-              value={tempTo}
-              onChangeText={setTempTo}
-              placeholder="2026-09-30"
-            />
-
-            <View style={styles.modalActionsRow}>
-              <AppButton
-                title={t.dashboard.cancel}
-                variant="outline"
-                style={{ flex: 1 }}
-                onPress={() => setIsCustomModalOpen(false)}
-              />
-              <AppButton
-                title={t.dashboard.applyFilter}
-                variant="primary"
-                style={{ flex: 1 }}
-                onPress={handleApplyCustomRange}
-              />
-            </View>
-          </View>
+        <View style={styles.modalActionsRow}>
+          <AppButton
+            title={t.dashboard.cancel}
+            variant="outline"
+            style={{ flex: 1 }}
+            onPress={() => setIsCustomModalOpen(false)}
+          />
+          <AppButton
+            title={t.dashboard.applyFilter}
+            variant="primary"
+            style={{ flex: 1 }}
+            onPress={handleApplyCustomRange}
+          />
         </View>
-      </Modal>
+      </AppModal>
     </AppScreenContainer>
   );
 }

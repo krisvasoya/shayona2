@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  Modal,
   FlatList,
   ActivityIndicator,
 } from 'react-native';
@@ -18,6 +17,7 @@ import {
   AppButton,
   AppTextInput,
   AppBadge,
+  AppModal,
 } from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
@@ -513,57 +513,44 @@ export default function CreateInvoiceScreen() {
       </ScrollView>
 
       {/* Party Selection Modal */}
-      <Modal
+      <AppModal
         visible={isPartyModalOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setIsPartyModalOpen(false)}
+        title={`${t.createInvoice.selectParty} (${partyType})`}
+        onClose={() => setIsPartyModalOpen(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <AppText variant="h3">
-                {t.createInvoice.selectParty} ({partyType})
-              </AppText>
-              <TouchableOpacity onPress={() => setIsPartyModalOpen(false)}>
-                <Ionicons name="close" size={24} color={colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
+        <AppTextInput
+          placeholder={`${t.createInvoice.selectParty}...`}
+          value={partySearch}
+          onChangeText={setPartySearch}
+        />
 
-            <AppTextInput
-              placeholder={`${t.createInvoice.selectParty}...`}
-              value={partySearch}
-              onChangeText={setPartySearch}
-            />
-
-            <FlatList
-              data={filteredParties}
-              keyExtractor={item => item.id}
-              style={{ maxHeight: 320 }}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.partyOptionItem}
-                  onPress={() => {
-                    setPartyId(item.id);
-                    setPartyName(item.name);
-                    setIsPartyModalOpen(false);
-                  }}
-                >
-                  <View style={styles.partyOptionInfo}>
-                    <AppText variant="bodyLargeBold">{item.name}</AppText>
-                    {item.phone && (
-                      <AppText variant="caption" color={colors.textSecondary}>
-                        {item.phone}
-                      </AppText>
-                    )}
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </View>
-      </Modal>
+        <FlatList
+          data={filteredParties}
+          keyExtractor={item => item.id}
+          style={{ maxHeight: 320 }}
+          scrollEnabled={false}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.partyOptionItem}
+              onPress={() => {
+                setPartyId(item.id);
+                setPartyName(item.name);
+                setIsPartyModalOpen(false);
+              }}
+            >
+              <View style={styles.partyOptionInfo}>
+                <AppText variant="bodyLargeBold">{item.name}</AppText>
+                {item.phone && (
+                  <AppText variant="caption" color={colors.textSecondary}>
+                    {item.phone}
+                  </AppText>
+                )}
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
+          )}
+        />
+      </AppModal>
     </AppScreenContainer>
   );
 }
