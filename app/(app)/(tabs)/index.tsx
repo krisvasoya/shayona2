@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
   scrollContainer: {
     paddingHorizontal: 16,
     paddingTop: 10,
-    paddingBottom: 36,
+    paddingBottom: 120,
   },
 
   // 2. Date Filter Pill Row
