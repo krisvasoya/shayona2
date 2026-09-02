@@ -14,8 +14,12 @@ import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
 import { formatCurrency } from '@/src/utils';
 
+import { useAuth } from '@/src/features/auth';
+
 export default function DashboardScreen() {
   const router = useRouter();
+  const { profile } = useAuth();
+  const shopName = profile?.shop_name || 'Shayona Enterprise';
 
   return (
     <AppScreenContainer
@@ -23,7 +27,7 @@ export default function DashboardScreen() {
       header={
         <AppHeader
           title="Dashboard"
-          subtitle="Shayona Enterprise"
+          subtitle={shopName}
           rightAction={
             <AppButton
               title="+ New Bill"

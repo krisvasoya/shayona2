@@ -4,7 +4,6 @@ import {
   StyleSheet,
   Image,
   TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -22,50 +21,55 @@ import { spacing } from '@/src/theme/spacing';
 import { borderRadius } from '@/src/theme/borderRadius';
 import { authService } from '@/src/services/auth.service';
 import { useAuthStore } from '@/src/store/authStore';
-import { loginSchema } from '@/src/features/auth/validation';
+import { signUpSchema } from '@/src/features/auth/validation';
 
-export default function LoginScreen() {
+export default function SignUpScreen() {
   const router = useRouter();
   const setSession = useAuthStore(state => state.setSession);
 
+  const [shopName, setShopName] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [errors, setErrors] = useState<{ phone?: string; password?: string; general?: string }>({});
+  const [errors, setErrors] = useState<{
+    shopName?: string;
+    phone?: string;
+    password?: string;
+    confirmPassword?: string;
+    general?: string;
+  }>({});
 
   const handlePhoneChange = (text: string) => {
-    // Only allow numbers, max 10 digits
     const cleaned = text.replace(/\D/g, '').slice(0, 10);
     setPhone(cleaned);
-    if (errors.phone) {
-      setErrors(prev => ({ ...prev, phone: undefined }));
-    }
+    if (errors.phone) setErrors(prev => ({ ...prev, phone: undefined }));
   };
 
-  const handleLogin = async () => {
+  const handleSignUp = async () => {
     setErrors({});
 
-    const validation = loginSchema.safeParse({
+    const validation = signUpSchema.safeParse({
+      shopName,
       phone,
       password,
-      rememberMe,
+      confirmPassword,
     });
 
     if (!validation.success) {
-      const fieldErrors: { phone?: string; password?: string } = {};
+      const fieldErrors: typeof errors = {};
       for (const issue of validation.error.issues) {
-        if (issue.path[0] === 'phone') fieldErrors.phone = issue.message;
-        if (issue.path[0] === 'password') fieldErrors.password = issue.message;
+        const field = issue.path[0] as keyof typeof errors;
+        if (field) fieldErrors[field] = issue.message;
       }
       setErrors(fieldErrors);
       return;
     }
 
     setLoading(true);
-    const result = await authService.signInWithPhone(phone, password, rememberMe);
+    const result = await authService.signUpWithPhone(shopName, phone, password);
     setLoading(false);
 
     if (result.error) {
@@ -73,28 +77,14 @@ export default function LoginScreen() {
       return;
     }
 
-    if (result.session) {
-      setSession(result.session, result.profile);
-      router.replace('/(app)/(tabs)');
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    setErrors({});
-    setGoogleLoading(true);
-    const result = await authService.signInWithGoogle();
-    setGoogleLoading(false);
-
-    if (result.error) {
-      if (result.error !== 'Google sign-in was cancelled.') {
-        Alert.alert('Google Sign-In', result.error);
+    if (result.user) {
+      if (result.session) {
+        setSession(result.session, result.profile);
+        router.replace('/(app)/(tabs)');
+      } else {
+        // If Supabase phone confirmation/auto-confirm is enabled, redirect to login or dashboard
+        router.replace('/(auth)/login');
       }
-      return;
-    }
-
-    if (result.session) {
-      setSession(result.session, result.profile);
-      router.replace('/(app)/(tabs)');
     }
   };
 
@@ -113,14 +103,14 @@ export default function LoginScreen() {
               resizeMode="contain"
             />
             <AppText variant="h2" style={styles.title}>
-              Invoice Bill Maker
+              Create Account
             </AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.subtitle}>
-              Manage your shop bills easily
+              Start creating invoices in seconds
             </AppText>
           </View>
 
-          {/* Login Card */}
+          {/* Sign Up Card */}
           <AppCard style={styles.card}>
             {errors.general ? (
               <View style={styles.errorBanner}>
@@ -135,7 +125,19 @@ export default function LoginScreen() {
               </View>
             ) : null}
 
-            {/* Mobile Number Input */}
+            {/* Shop Name */}
+            <AppTextInput
+              label="Shop Name"
+              placeholder="e.g. ABC General Store"
+              value={shopName}
+              onChangeText={text => {
+                setShopName(text);
+                if (errors.shopName) setErrors(prev => ({ ...prev, shopName: undefined }));
+              }}
+              error={errors.shopName}
+            />
+
+            {/* Mobile Number */}
             <AppTextInput
               label="Mobile Number"
               placeholder="98765 43210"
@@ -151,10 +153,10 @@ export default function LoginScreen() {
               }
             />
 
-            {/* Password Input */}
+            {/* Password */}
             <AppTextInput
               label="Password"
-              placeholder="Enter your password"
+              placeholder="Create a password (min 6 chars)"
               value={password}
               onChangeText={text => {
                 setPassword(text);
@@ -176,72 +178,51 @@ export default function LoginScreen() {
               }
             />
 
-            {/* Remember Me & Forgot Password Row */}
-            <View style={styles.optionsRow}>
-              <TouchableOpacity
-                style={styles.rememberMeContainer}
-                onPress={() => setRememberMe(prev => !prev)}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name={rememberMe ? 'checkbox' : 'square-outline'}
-                  size={20}
-                  color={rememberMe ? colors.primary : colors.textMuted}
-                />
-                <AppText variant="bodyMedium" style={styles.rememberMeText}>
-                  Remember Me
-                </AppText>
-              </TouchableOpacity>
+            {/* Confirm Password */}
+            <AppTextInput
+              label="Confirm Password"
+              placeholder="Re-enter your password"
+              value={confirmPassword}
+              onChangeText={text => {
+                setConfirmPassword(text);
+                if (errors.confirmPassword)
+                  setErrors(prev => ({ ...prev, confirmPassword: undefined }));
+              }}
+              secureTextEntry={!showConfirmPassword}
+              error={errors.confirmPassword}
+              rightIcon={
+                <TouchableOpacity
+                  onPress={() => setShowConfirmPassword(prev => !prev)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color={colors.textMuted}
+                  />
+                </TouchableOpacity>
+              }
+            />
 
-              <TouchableOpacity
-                onPress={() => router.push('/(auth)/forgot-password')}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <AppText variant="captionBold" color={colors.accent}>
-                  Forgot Password?
-                </AppText>
-              </TouchableOpacity>
-            </View>
-
-            {/* Login Button */}
+            {/* Submit Button */}
             <AppButton
-              title="Login"
+              title="Create Account"
               variant="primary"
               fullWidth
               loading={loading}
-              onPress={handleLogin}
-              style={styles.loginBtn}
-            />
-
-            {/* OR Divider */}
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <AppText variant="caption" color={colors.textMuted} style={styles.dividerText}>
-                OR
-              </AppText>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* Google Login Button */}
-            <AppButton
-              title="Continue with Google"
-              variant="secondary"
-              fullWidth
-              loading={googleLoading}
-              onPress={handleGoogleLogin}
-              icon={<Ionicons name="logo-google" size={18} color="#EA4335" />}
-              style={styles.googleBtn}
+              onPress={handleSignUp}
+              style={styles.submitBtn}
             />
           </AppCard>
 
-          {/* Sign Up Navigation Link */}
+          {/* Already Have Account */}
           <View style={styles.footerRow}>
             <AppText variant="body" color={colors.textSecondary}>
-              Don't have an account?{' '}
+              Already have an account?{' '}
             </AppText>
-            <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
+            <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
               <AppText variant="bodyLargeBold" color={colors.accent}>
-                Create Account
+                Login
               </AppText>
             </TouchableOpacity>
           </View>
@@ -296,38 +277,8 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xs,
     flex: 1,
   },
-  optionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  rememberMeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  rememberMeText: {
-    marginLeft: spacing.xs,
-  },
-  loginBtn: {
-    marginBottom: spacing.md,
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: spacing.md,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  dividerText: {
-    marginHorizontal: spacing.md,
-    fontWeight: '600',
-  },
-  googleBtn: {
-    marginTop: spacing.xs,
+  submitBtn: {
+    marginTop: spacing.md,
   },
   footerRow: {
     flexDirection: 'row',
