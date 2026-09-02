@@ -122,8 +122,13 @@ export default function DashboardScreen() {
           <RefreshControl refreshing={isRefetching} onRefresh={refetch} colors={[colors.primary]} />
         }
       >
-        {/* Date Filter Tabs */}
-        <View style={styles.filterRow}>
+        {/* Date Filter Tabs (Horizontal Scroll) */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}
+          style={styles.filterScroll}
+        >
           {filtersList.map(item => {
             const isActive = activeFilter === item.key;
             return (
@@ -142,7 +147,7 @@ export default function DashboardScreen() {
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
 
         {/* Active Date Range Indicator */}
         <View style={styles.dateIndicatorRow}>
@@ -399,17 +404,19 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   scrollContainer: {
     padding: spacing.screenPadding,
-    paddingBottom: 110,
+    paddingBottom: 160,
   },
   headerBtn: {
     minHeight: 36,
     paddingHorizontal: spacing.sm,
   },
+  filterScroll: {
+    marginBottom: spacing.xs,
+  },
   filterRow: {
     flexDirection: 'row',
     gap: spacing.xs,
-    marginBottom: spacing.xs,
-    flexWrap: 'wrap',
+    paddingRight: spacing.md,
   },
   filterChip: {
     paddingHorizontal: spacing.sm,

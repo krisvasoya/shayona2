@@ -1,5 +1,6 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
 import { InvoiceDetail } from '@/src/types/invoice';
 import { DbProfile } from '@/src/types/database';
 import { SupportedLanguage } from '@/src/localization';
@@ -129,7 +130,7 @@ export const pdfService = {
 
           @page {
             size: A4;
-            margin: 15mm;
+            margin: 12mm;
           }
 
           body {
@@ -518,26 +519,69 @@ export const pdfService = {
   },
 
   /**
-   * Print or create PDF file from Invoice
+   * Print or create PDF file from Invoice with a clean, shareable local file path
    */
   async createInvoicePdf(options: InvoicePdfOptions): Promise<{ uri: string }> {
     const html = this.generateInvoiceHtml(options);
-    const { uri } = await Print.printToFileAsync({
+    const { uri: tempUri } = await Print.printToFileAsync({
       html,
       base64: false,
     });
-    return { uri };
+
+    try {
+      // Clean and sanitize invoice number for filename
+      const safeInvoiceNum = (options.invoice.invoice_number || 'INV').replace(
+        /[^a-zA-Z0-9_-]/g,
+        '_',
+      );
+      const targetFileName = `Invoice-${safeInvoiceNum}.pdf`;
+
+      const cacheDir = FileSystem.cacheDirectory || FileSystem.documentDirectory;
+      if (cacheDir) {
+        const targetUri = `${cacheDir}${targetFileName}`;
+
+        // Copy or overwrite to cache directory with clean filename
+        await FileSystem.copyAsync({
+          from: tempUri,
+          to: targetUri,
+        });
+
+        const fileInfo = await FileSystem.getInfoAsync(targetUri);
+        if (fileInfo.exists && fileInfo.size > 0) {
+          return { uri: targetUri };
+        }
+      }
+    } catch {
+      // Fallback to tempUri if copying fails
+    }
+
+    return { uri: tempUri };
   },
 
   /**
    * Share generated PDF file via system share sheet
    */
-  async shareInvoicePdf(uri: string): Promise<void> {
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(uri, {
-        UTI: '.pdf',
-        mimeType: 'application/pdf',
-      });
+  async shareInvoicePdf(uri: string, invoiceNumber?: string): Promise<void> {
+    const isAvailable = await Sharing.isAvailableAsync();
+    if (!isAvailable) {
+      throw new Error('Sharing is not available on this device.');
     }
+
+    try {
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      if (!fileInfo.exists) {
+        throw new Error('Generated invoice PDF file could not be found.');
+      }
+    } catch (err) {
+      if ((err as Error).message?.includes('could not be found')) {
+        throw err;
+      }
+    }
+
+    await Sharing.shareAsync(uri, {
+      UTI: '.pdf',
+      mimeType: 'application/pdf',
+      dialogTitle: invoiceNumber ? `Share Bill #${invoiceNumber}` : 'Share Invoice',
+    });
   },
 };

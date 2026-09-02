@@ -12,6 +12,13 @@ jest.mock('expo-sharing', () => ({
   shareAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock('expo-file-system/legacy', () => ({
+  cacheDirectory: 'file:///mock/cache/',
+  documentDirectory: 'file:///mock/doc/',
+  copyAsync: jest.fn().mockResolvedValue(undefined),
+  getInfoAsync: jest.fn().mockResolvedValue({ exists: true, size: 1024 }),
+}));
+
 describe('PHASE 8 — Professional Invoice PDF Generation & Tests', () => {
   describe('Indian Number to Words Formatting', () => {
     it('should format English currency words correctly', () => {

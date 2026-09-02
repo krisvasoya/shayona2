@@ -109,15 +109,29 @@ export default function InvoiceDetailScreen() {
         updated_at: new Date().toISOString(),
       };
 
-      const { uri } = await pdfService.createInvoicePdf({
-        invoice,
-        profile: userProfile,
-        language: lang,
-      });
+      let pdfResult: { uri: string };
+      try {
+        pdfResult = await pdfService.createInvoicePdf({
+          invoice,
+          profile: userProfile,
+          language: lang,
+        });
+      } catch (genErr) {
+        Alert.alert(
+          'PDF Generation Error',
+          (genErr as Error).message || 'Unable to generate invoice PDF.',
+        );
+        return;
+      }
 
-      await pdfService.shareInvoicePdf(uri);
-    } catch (err) {
-      Alert.alert('PDF Generation Error', (err as Error).message || 'Unable to generate PDF.');
+      try {
+        await pdfService.shareInvoicePdf(pdfResult.uri, invoice.invoice_number);
+      } catch (shareErr) {
+        Alert.alert(
+          'PDF Sharing Error',
+          (shareErr as Error).message || 'Unable to open system share menu.',
+        );
+      }
     } finally {
       setGeneratingPdf(false);
     }
