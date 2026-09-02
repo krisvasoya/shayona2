@@ -3,6 +3,8 @@
  * Safe monetary formatting and arithmetic (paise-based integer arithmetic).
  */
 
+export * from './phone';
+
 /**
  * Format integer paise into display INR currency string (e.g. 1000000 -> ₹10,000.00)
  */

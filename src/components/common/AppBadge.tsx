@@ -6,7 +6,7 @@ import { borderRadius } from '@/src/theme/borderRadius';
 import { spacing } from '@/src/theme/spacing';
 import { fontSize, fontWeight } from '@/src/theme/typography';
 
-export type BadgeVariant = 'jama' | 'baki' | 'success' | 'warning' | 'info' | 'neutral';
+export type BadgeVariant = 'jama' | 'baki' | 'danger' | 'success' | 'warning' | 'info' | 'neutral';
 
 export interface AppBadgeProps {
   label: string;
@@ -29,6 +29,7 @@ export const AppBadge: React.FC<AppBadgeProps> = ({
           text: { color: colors.jama },
         };
       case 'baki':
+      case 'danger':
         return {
           container: { backgroundColor: colors.bakiBackground, borderColor: '#FECACA' },
           text: { color: colors.baki },

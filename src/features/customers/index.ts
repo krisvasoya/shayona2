@@ -1,14 +1,7 @@
 /**
- * Customers Feature Module Placeholder
+ * Customer Feature Module Barrel Export
  */
 
-export interface Customer {
-  id: string;
-  name: string;
-  phone?: string;
-  address?: string;
-  totalInvoices: number;
-  totalBakiDue: number; // in paise
-  createdAt: string;
-  updatedAt: string;
-}
+export * from './validation';
+export * from './useCustomers';
+export * from '@/src/types/customer';

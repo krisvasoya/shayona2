@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { supabase } from '@/src/services/supabase/client';
 import { useAuthStore } from '@/src/store/authStore';
 import { authService } from '@/src/services/auth.service';
@@ -12,6 +13,20 @@ import 'react-native-reanimated';
 export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
+
+  // Single QueryClient instance across app lifecycle
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 1000 * 30, // 30 seconds
+            retry: 1,
+            refetchOnWindowFocus: false,
+          },
+        },
+      }),
+  );
 
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const isInitialized = useAuthStore(state => state.isInitialized);
@@ -71,14 +86,14 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(app)" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
       </Stack>
-    </>
+    </QueryClientProvider>
   );
 }
 
