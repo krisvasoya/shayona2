@@ -64,13 +64,6 @@ export default function TabLayout() {
           ),
         }}
       />
-      {/* Settings is accessible from Left Drawer only (hidden from bottom bar) */}
-      <Tabs.Screen
-        name="settings"
-        options={{
-          href: null,
-        }}
-      />
     </Tabs>
   );
 }

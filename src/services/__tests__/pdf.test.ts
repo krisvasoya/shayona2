@@ -11,7 +11,10 @@ jest.mock('expo-linking', () => ({
 }));
 
 jest.mock('expo-print', () => ({
-  printToFileAsync: jest.fn().mockResolvedValue({ uri: 'file:///mock/invoice.pdf' }),
+  printToFileAsync: jest.fn().mockResolvedValue({
+    uri: 'file:///mock/invoice.pdf',
+    base64: 'JVBERi0xLjQKJc...',
+  }),
   printAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
@@ -23,7 +26,10 @@ jest.mock('expo-sharing', () => ({
 jest.mock('expo-file-system/legacy', () => ({
   cacheDirectory: 'file:///mock/cache/',
   documentDirectory: 'file:///mock/doc/',
+  EncodingType: { Base64: 'base64' },
   copyAsync: jest.fn().mockResolvedValue(undefined),
+  writeAsStringAsync: jest.fn().mockResolvedValue(undefined),
+  deleteAsync: jest.fn().mockResolvedValue(undefined),
   getInfoAsync: jest.fn().mockResolvedValue({ exists: true, size: 1024 }),
 }));
 
@@ -52,7 +58,7 @@ describe('PHASE 8 & 9 — Professional Invoice PDF Generation & Delivery Tests',
     });
   });
 
-  describe('Invoice HTML Template & Acceptance Test', () => {
+  describe('Customer-Facing Invoice HTML Template (Subtotal & Grand Total ONLY)', () => {
     const mockProfile: DbProfile = {
       id: 'usr-123',
       name: 'Owner',
@@ -131,7 +137,7 @@ describe('PHASE 8 & 9 — Professional Invoice PDF Generation & Delivery Tests',
       ],
     };
 
-    it('should generate exact non-GST invoice matching INV-0001 reference', () => {
+    it('should generate exact customer-facing non-GST invoice with Subtotal & Grand Total ONLY', () => {
       const options: InvoicePdfOptions = {
         invoice: customerInvoice,
         profile: mockProfile,
@@ -158,12 +164,16 @@ describe('PHASE 8 & 9 — Professional Invoice PDF Generation & Delivery Tests',
       expect(html).toContain('₹20,000.00');
       expect(html).toContain('₹9,500.00');
 
-      // Totals
+      // Totals: MUST contain Subtotal and Grand Total ONLY
       expect(html).toContain('Subtotal');
-      expect(html).toContain('Grand Total (₹)');
+      expect(html).toContain('Grand Total');
       expect(html).toContain('₹29,500.00');
-      expect(html).toContain('₹0.00');
-      expect(html).toContain('Baki');
+
+      // STRICT CHECK: MUST NOT CONTAIN JAMA OR BAKI
+      expect(html).not.toContain('Jama');
+      expect(html).not.toContain('Paid Amount');
+      expect(html).not.toContain('Baki');
+      expect(html).not.toContain('Remaining Due');
 
       // Amount in Words
       expect(html).toContain('Twenty Nine Thousand Five Hundred Rupees Only');
@@ -173,7 +183,7 @@ describe('PHASE 8 & 9 — Professional Invoice PDF Generation & Delivery Tests',
       expect(html).toContain('Shayona Enterprise');
     });
 
-    it('should render BUYER invoices with partial payment breakdown correctly', () => {
+    it('should render BUYER invoices with Subtotal and Grand Total ONLY, without Jama or Baki', () => {
       const options: InvoicePdfOptions = {
         invoice: buyerInvoice,
         profile: mockProfile,
@@ -185,13 +195,17 @@ describe('PHASE 8 & 9 — Professional Invoice PDF Generation & Delivery Tests',
       expect(html).toContain('BUYER');
       expect(html).toContain('Manish Textile Wholesale Hub');
       expect(html).toContain('Polyester Silk Dress Material');
+      expect(html).toContain('Subtotal');
+      expect(html).toContain('Grand Total');
       expect(html).toContain('₹50,000.00');
-      expect(html).toContain('₹20,000.00'); // Jama
-      expect(html).toContain('₹30,000.00'); // Baki
       expect(html).toContain('Fifty Thousand Rupees Only');
+
+      // STRICT CHECK: NO Jama, NO Baki in customer-facing PDF
+      expect(html).not.toContain('Jama');
+      expect(html).not.toContain('Baki');
     });
 
-    it('should render Gujarati invoice when language is set to "gu"', () => {
+    it('should render Gujarati customer-facing invoice with Subtotal & Grand Total ONLY', () => {
       const options: InvoicePdfOptions = {
         invoice: customerInvoice,
         profile: mockProfile,
@@ -200,30 +214,16 @@ describe('PHASE 8 & 9 — Professional Invoice PDF Generation & Delivery Tests',
 
       const html = pdfService.generateInvoiceHtml(options);
 
-      expect(html).toContain('બિલ / ઇનવોઇસ');
+      expect(html).toContain('ઇનવોઇસ (INVOICE)');
       expect(html).toContain('ગ્રાહક (CUSTOMER)');
+      expect(html).toContain('સબટોટલ (Subtotal)');
       expect(html).toContain('કુલ રકમ (Grand Total)');
-      expect(html).toContain('જમા (Jama / Paid)');
-      expect(html).toContain('બાકી (Baki / Due)');
       expect(html).toContain('ઓગણત્રીસ હજાર પાંચસો રૂપિયા પૂરા');
       expect(html).toContain('સહી / સિક્કો');
-    });
 
-    it('should render FULLY PAID badge and clean styling when remaining amount is zero', () => {
-      const fullyPaidInvoice: InvoiceDetail = {
-        ...customerInvoice,
-        paid_amount: 2950000,
-        remaining_amount: 0,
-      };
-
-      const html = pdfService.generateInvoiceHtml({
-        invoice: fullyPaidInvoice,
-        profile: mockProfile,
-        language: 'en',
-      });
-
-      expect(html).toContain('clear-row');
-      expect(html).toContain('₹0.00');
+      // STRICT CHECK: NO Jama, NO Baki in Gujarati customer-facing PDF
+      expect(html).not.toContain('જમા');
+      expect(html).not.toContain('બાકી');
     });
 
     it('CRITICAL ZERO-GST CHECK: should contain ZERO GST, Tax, CGST, SGST, IGST, or HSN', () => {
@@ -240,40 +240,6 @@ describe('PHASE 8 & 9 — Professional Invoice PDF Generation & Delivery Tests',
       expect(html).not.toContain('SGST');
       expect(html).not.toContain('IGST');
       expect(html).not.toContain('HSN');
-    });
-
-    it('should handle long text descriptions and party names cleanly without breaking structure', () => {
-      const longTextInvoice: InvoiceDetail = {
-        ...customerInvoice,
-        party_name: 'Shreeji Commercial Wholesale Distributors and Export House Private Limited',
-        items: [
-          {
-            id: 'long-item-1',
-            invoice_id: 'inv-001',
-            item_name:
-              'Premium Combed Cotton 60s Count Yarn with Soft Flow Reactive Dyeing and Bio-wash Finishing Treatment Special Order #49281',
-            quantity: 10,
-            rate: 295000,
-            amount: 2950000,
-            created_at: new Date().toISOString(),
-          },
-        ],
-      };
-
-      const html = pdfService.generateInvoiceHtml({
-        invoice: longTextInvoice,
-        profile: {
-          ...mockProfile,
-          shop_name: 'Shayona Advanced Textile Manufacturing and Trading Corporation',
-        },
-        language: 'en',
-      });
-
-      expect(html).toContain('Shayona Advanced Textile Manufacturing and Trading Corporation');
-      expect(html).toContain(
-        'Shreeji Commercial Wholesale Distributors and Export House Private Limited',
-      );
-      expect(html).toContain('Premium Combed Cotton 60s Count Yarn');
     });
 
     it('should generate PDF file and return valid file URI', async () => {

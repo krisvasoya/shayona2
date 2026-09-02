@@ -46,15 +46,15 @@ export function formatInvoiceDate(dateString: string): string {
 
 export const pdfService = {
   /**
-   * Generates clean, professional, non-GST printable HTML for the invoice
-   * matching the exact retail sample specifications.
+   * Generates clean, professional, non-GST printable HTML for customer-facing invoice.
+   * STRICT REQUIREMENT: Shows ONLY Subtotal & Grand Total (NO Jama, NO Paid Amount, NO Baki, NO Remaining Due).
    */
   generateInvoiceHtml(options: InvoicePdfOptions): string {
     const { invoice, profile, language = 'en' } = options;
 
     const isGu = language === 'gu';
 
-    // Format Date: e.g. "04 Jul 2026"
+    // Format Date: e.g. "02 Sep 2026"
     const formattedDate = formatInvoiceDate(invoice.invoice_date);
 
     const shopName = profile.shop_name || 'Shayona Enterprise';
@@ -63,11 +63,9 @@ export const pdfService = {
     const grandTotalRupees = paiseToRupees(Number(invoice.total_amount || 0));
     const wordsText = amountInWords(grandTotalRupees, language);
 
-    const isFullyPaid = Number(invoice.remaining_amount) === 0;
-
-    // UI Translations
+    // UI Translations - NO JAMA, NO BAKI, NO GST
     const t = {
-      title: isGu ? 'બિલ / ઇનવોઇસ' : 'INVOICE',
+      title: isGu ? 'ઇનવોઇસ (INVOICE)' : 'INVOICE',
       invoiceNo: isGu ? 'ઇનવોઇસ નંબર' : 'INVOICE NO.',
       invoiceDate: isGu ? 'તારીખ' : 'INVOICE DATE',
       mobile: isGu ? 'મોબાઇલ' : 'Mobile',
@@ -80,19 +78,17 @@ export const pdfService = {
             ? 'વેપારી (BUYER)'
             : 'BUYER',
       colNo: '#',
-      colDesc: isGu ? 'વિગત' : 'DESCRIPTION',
-      colQty: isGu ? 'જથ્થો' : 'QTY',
-      colRate: isGu ? 'ભાવ (₹)' : 'RATE (₹)',
-      colAmount: isGu ? 'રકમ (₹)' : 'AMOUNT (₹)',
-      subtotal: isGu ? 'સબટોટલ' : 'Subtotal',
-      grandTotal: isGu ? 'કુલ રકમ (Grand Total)' : 'Grand Total (₹)',
-      jama: isGu ? 'જમા (Jama / Paid)' : 'Jama / Paid',
-      baki: isGu ? 'બાકી (Baki / Due)' : 'Baki',
+      colDesc: isGu ? 'વિગત (DESCRIPTION)' : 'DESCRIPTION',
+      colQty: isGu ? 'જથ્થો (QTY)' : 'QTY',
+      colRate: isGu ? 'ભાવ (RATE)' : 'RATE (₹)',
+      colAmount: isGu ? 'રકમ (AMOUNT)' : 'AMOUNT (₹)',
+      subtotal: isGu ? 'સબટોટલ (Subtotal)' : 'Subtotal',
+      grandTotal: isGu ? 'કુલ રકમ (Grand Total)' : 'Grand Total',
       amountInWordsTitle: isGu
         ? 'અંકે રૂપિયા શબ્દોમાં (AMOUNT IN WORDS)'
         : 'AMOUNT CHARGEABLE (IN WORDS)',
       signatory: isGu ? 'સહી / સિક્કો' : 'Authorised Signatory',
-      notes: isGu ? 'નોંધ' : 'Notes',
+      notes: isGu ? 'નોંધ (Terms & Notes)' : 'Terms & Notes',
     };
 
     // Render Table Rows
@@ -138,35 +134,37 @@ export const pdfService = {
             font-family: 'Inter', 'Noto Sans Gujarati', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             color: #000000;
             background: #FFFFFF;
-            line-height: 1.4;
+            padding: 16px;
             font-size: 13px;
-            padding: 10px;
+            line-height: 1.4;
           }
 
           .invoice-container {
             width: 100%;
             max-width: 800px;
             margin: 0 auto;
+            border: 2px solid #000000;
+            padding: 16px;
             background: #FFFFFF;
           }
 
-          /* Title */
+          /* Header & Title */
           .invoice-title {
             text-align: center;
             font-size: 20px;
-            font-weight: 700;
-            letter-spacing: 2px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
             padding-bottom: 8px;
-            margin-bottom: 12px;
             border-bottom: 2px solid #000000;
+            margin-bottom: 12px;
           }
 
-          /* Header Section */
+          /* Top Info Table */
           .header-table {
             width: 100%;
-            margin-bottom: 14px;
             border-collapse: collapse;
+            margin-bottom: 12px;
           }
 
           .header-table td {
@@ -175,7 +173,21 @@ export const pdfService = {
 
           .shop-col {
             width: 60%;
-            text-align: left;
+            padding-right: 12px;
+          }
+
+          .shop-name {
+            font-size: 18px;
+            font-weight: 800;
+            color: #000000;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+          }
+
+          .shop-phone {
+            font-size: 13px;
+            font-weight: 600;
+            color: #333333;
           }
 
           .meta-col {
@@ -183,25 +195,11 @@ export const pdfService = {
             text-align: right;
           }
 
-          .shop-name {
-            font-size: 18px;
-            font-weight: 700;
-            color: #000000;
-            margin-bottom: 4px;
-            text-transform: uppercase;
-          }
-
-          .shop-phone {
-            font-size: 13px;
-            color: #333333;
-            font-weight: 500;
-          }
-
           .meta-label {
             font-size: 11px;
+            font-weight: 600;
             color: #555555;
             text-transform: uppercase;
-            font-weight: 600;
           }
 
           .meta-value {
@@ -211,12 +209,12 @@ export const pdfService = {
             margin-bottom: 6px;
           }
 
-          /* Customer Box */
+          /* Customer Section */
           .customer-box {
             border: 1.5px solid #000000;
-            padding: 10px 12px;
+            padding: 8px 12px;
             margin-bottom: 14px;
-            background: #FAFAFA;
+            background-color: #FAFAFA;
           }
 
           .customer-label {
@@ -228,7 +226,7 @@ export const pdfService = {
           }
 
           .customer-name {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 700;
             color: #000000;
           }
@@ -241,12 +239,12 @@ export const pdfService = {
           }
 
           .items-table th {
-            background-color: #000000;
-            color: #FFFFFF;
-            font-size: 12px;
+            background-color: #F3F4F6;
+            color: #000000;
             font-weight: 700;
-            padding: 8px 6px;
+            font-size: 12px;
             text-transform: uppercase;
+            padding: 8px 6px;
             border: 1px solid #000000;
           }
 
@@ -311,7 +309,7 @@ export const pdfService = {
           .words-box {
             border: 1.5px solid #000000;
             padding: 10px 12px;
-            min-height: 90px;
+            min-height: 80px;
             background: #FAFAFA;
           }
 
@@ -329,7 +327,7 @@ export const pdfService = {
             color: #000000;
           }
 
-          /* Totals Table */
+          /* Totals Table - ONLY Subtotal and Grand Total */
           .totals-table {
             width: 100%;
             border-collapse: collapse;
@@ -337,7 +335,7 @@ export const pdfService = {
           }
 
           .totals-table td {
-            padding: 6px 10px;
+            padding: 8px 10px;
             font-size: 13px;
             border-bottom: 1px solid #E5E7EB;
           }
@@ -356,28 +354,13 @@ export const pdfService = {
           .grand-total-row {
             background-color: #F3F4F6;
             border-top: 1.5px solid #000000;
-            border-bottom: 1.5px solid #000000;
           }
 
           .grand-total-row td {
-            padding: 8px 10px;
-            font-size: 14px;
+            padding: 10px 10px;
+            font-size: 15px;
             font-weight: 800;
             color: #000000;
-          }
-
-          .jama-row td {
-            color: #059669;
-          }
-
-          .baki-row td {
-            color: #DC2626;
-            font-weight: 800;
-          }
-
-          .clear-row td {
-            color: #059669;
-            font-weight: 700;
           }
 
           /* Footer & Signatory */
@@ -393,13 +376,13 @@ export const pdfService = {
 
           .signatory-box {
             text-align: right;
-            padding-top: 30px;
+            padding-top: 24px;
           }
 
           .signatory-label {
             font-size: 12px;
             color: #4B5563;
-            margin-bottom: 30px;
+            margin-bottom: 28px;
             font-weight: 500;
           }
 
@@ -441,7 +424,7 @@ export const pdfService = {
             </tr>
           </table>
 
-          <!-- 3. Customer Box -->
+          <!-- 3. Customer / Buyer Box -->
           <div class="customer-box">
             <div class="customer-label">${t.partyLabel}</div>
             <div class="customer-name">${invoice.party_name}</div>
@@ -463,7 +446,7 @@ export const pdfService = {
             </tbody>
           </table>
 
-          <!-- 5. Bottom Section: Amount in Words & Financial Breakdown -->
+          <!-- 5. Bottom Section: Amount in Words & Financial Breakdown (Subtotal & Grand Total ONLY) -->
           <table class="summary-section">
             <tr>
               <td class="words-col">
@@ -481,14 +464,6 @@ export const pdfService = {
                   <tr class="grand-total-row">
                     <td class="totals-label">${t.grandTotal}</td>
                     <td class="totals-value">${formatCurrency(Number(invoice.total_amount))}</td>
-                  </tr>
-                  <tr class="jama-row">
-                    <td class="totals-label">${t.jama}</td>
-                    <td class="totals-value">${formatCurrency(Number(invoice.paid_amount))}</td>
-                  </tr>
-                  <tr class="${isFullyPaid ? 'clear-row' : 'baki-row'}">
-                    <td class="totals-label">${t.baki}</td>
-                    <td class="totals-value">${formatCurrency(Number(invoice.remaining_amount))}</td>
                   </tr>
                 </table>
               </td>
@@ -520,13 +495,14 @@ export const pdfService = {
   },
 
   /**
-   * Print or create PDF file from Invoice with a clean, shareable local file path
+   * Print or create PDF file from Invoice with a clean, shareable local file path.
+   * Directly writes Base64 or copies to cacheDirectory so Android FileProvider has valid permissions.
    */
   async createInvoicePdf(options: InvoicePdfOptions): Promise<{ uri: string }> {
     const html = this.generateInvoiceHtml(options);
-    const { uri: tempUri } = await Print.printToFileAsync({
+    const { uri: tempUri, base64 } = await Print.printToFileAsync({
       html,
-      base64: false,
+      base64: true,
     });
 
     try {
@@ -537,15 +513,27 @@ export const pdfService = {
       );
       const targetFileName = `Invoice-${safeInvoiceNum}.pdf`;
 
-      const cacheDir = FileSystem.cacheDirectory || FileSystem.documentDirectory;
-      if (cacheDir) {
-        const targetUri = `${cacheDir}${targetFileName}`;
+      const targetDir = FileSystem.cacheDirectory || FileSystem.documentDirectory;
+      if (targetDir) {
+        const targetUri = `${targetDir}${targetFileName}`;
 
-        // Copy or overwrite to cache directory with clean filename
-        await FileSystem.copyAsync({
-          from: tempUri,
-          to: targetUri,
-        });
+        // If file already exists from a previous run, delete it first to prevent copyAsync collisions
+        const existingInfo = await FileSystem.getInfoAsync(targetUri);
+        if (existingInfo.exists) {
+          await FileSystem.deleteAsync(targetUri, { idempotent: true });
+        }
+
+        // Prefer writing direct base64 bytes for rock-solid Android FileProvider compatibility
+        if (base64) {
+          await FileSystem.writeAsStringAsync(targetUri, base64, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+        } else {
+          await FileSystem.copyAsync({
+            from: tempUri,
+            to: targetUri,
+          });
+        }
 
         const fileInfo = await FileSystem.getInfoAsync(targetUri);
         if (fileInfo.exists && fileInfo.size > 0) {
@@ -553,7 +541,7 @@ export const pdfService = {
         }
       }
     } catch {
-      // Fallback to tempUri if copying fails
+      // Fallback to tempUri if writing/copying fails
     }
 
     return { uri: tempUri };
@@ -568,15 +556,9 @@ export const pdfService = {
       throw new Error('Sharing is not available on this device.');
     }
 
-    try {
-      const fileInfo = await FileSystem.getInfoAsync(uri);
-      if (!fileInfo.exists) {
-        throw new Error('Generated invoice PDF file could not be found.');
-      }
-    } catch (err) {
-      if ((err as Error).message?.includes('could not be found')) {
-        throw err;
-      }
+    const fileInfo = await FileSystem.getInfoAsync(uri);
+    if (!fileInfo.exists || fileInfo.size === 0) {
+      throw new Error('Generated invoice PDF file could not be found or is empty.');
     }
 
     await Sharing.shareAsync(uri, {
@@ -606,15 +588,9 @@ export const pdfService = {
       throw new Error('Sharing is not available on this device.');
     }
 
-    try {
-      const fileInfo = await FileSystem.getInfoAsync(uri);
-      if (!fileInfo.exists || fileInfo.size === 0) {
-        throw new Error('Generated invoice PDF file could not be found.');
-      }
-    } catch (err) {
-      if ((err as Error).message?.includes('could not be found')) {
-        throw err;
-      }
+    const fileInfo = await FileSystem.getInfoAsync(uri);
+    if (!fileInfo.exists || fileInfo.size === 0) {
+      throw new Error('Generated invoice PDF file could not be found or is empty.');
     }
 
     await Sharing.shareAsync(uri, {
@@ -625,7 +601,8 @@ export const pdfService = {
   },
 
   /**
-   * Print invoice using native print service
+   * Print invoice using native print service.
+   * Uses customer-facing invoice HTML (Subtotal & Grand Total ONLY).
    */
   async printInvoice(options: InvoicePdfOptions): Promise<void> {
     const html = this.generateInvoiceHtml(options);

@@ -209,7 +209,7 @@ export const AppDrawer: React.FC = () => {
           <View style={styles.menuSection}>
             <TouchableOpacity
               style={styles.menuItem}
-              onPress={() => handleNavigate('/(app)/(tabs)/settings')}
+              onPress={() => handleNavigate('/(app)/settings')}
             >
               <Ionicons
                 name="settings-outline"
@@ -222,7 +222,7 @@ export const AppDrawer: React.FC = () => {
 
             <TouchableOpacity
               style={styles.menuItem}
-              onPress={() => handleNavigate('/(app)/(tabs)/settings')}
+              onPress={() => handleNavigate('/(app)/settings')}
             >
               <Ionicons
                 name="globe-outline"
@@ -235,7 +235,7 @@ export const AppDrawer: React.FC = () => {
 
             <TouchableOpacity
               style={styles.menuItem}
-              onPress={() => handleNavigate('/(app)/(tabs)/settings')}
+              onPress={() => handleNavigate('/(app)/settings')}
             >
               <Ionicons
                 name="person-circle-outline"
