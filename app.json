@@ -1,21 +1,26 @@
 {
   "expo": {
-    "name": "temp_tabs",
-    "slug": "temp_tabs",
+    "name": "Shayona Invoice",
+    "slug": "shayona-invoice",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "temptabs",
-    "userInterfaceStyle": "automatic",
+    "scheme": "shayonainvoice",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1E293B"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.shayona.invoice"
     },
     "android": {
+      "package": "com.shayona.invoice",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#1E293B",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -31,7 +36,7 @@
         {
           "image": "./assets/images/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#1E293B"
         }
       ]
     ],

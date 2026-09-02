@@ -1,0 +1,9 @@
+node_modules/
+.expo/
+dist/
+android/
+ios/
+assets/
+logo/
+.system_generated/
+*.log
