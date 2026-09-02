@@ -1,14 +1,7 @@
 /**
- * Buyers Feature Module Placeholder
+ * Buyer Feature Module Barrel Export
  */
 
-export interface Buyer {
-  id: string;
-  name: string;
-  phone?: string;
-  address?: string;
-  totalInvoices: number;
-  totalBakiDue: number; // in paise
-  createdAt: string;
-  updatedAt: string;
-}
+export * from './validation';
+export * from './useBuyers';
+export * from '@/src/types/buyer';
