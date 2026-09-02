@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   AppScreenContainer,
   AppHeader,
@@ -8,6 +9,7 @@ import {
   AppCard,
   AppBadge,
   AppButton,
+  AppTextInput,
 } from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
@@ -16,17 +18,26 @@ import { useAuth } from '@/src/features/auth';
 import { useLanguage, SupportedLanguage } from '@/src/localization';
 import { formatPhoneDisplay } from '@/src/utils/phone';
 import { syncService } from '@/src/services/sync.service';
+import { backupService } from '@/src/services/backup.service';
 import { useNetworkStore } from '@/src/services/network.service';
 import { localStore } from '@/src/database/localStore';
 
 export default function SettingsScreen() {
   const { user, profile, signOut, isLoading } = useAuth();
   const { language, setLanguage, t } = useLanguage();
+  const queryClient = useQueryClient();
   const isOnline = useNetworkStore(state => state.isOnline);
   const [loggingOut, setLoggingOut] = useState(false);
   const [savingLang, setSavingLang] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+
+  // Phase 18: Backup & Restore state
+  const [exportingBackup, setExportingBackup] = useState(false);
+  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
+  const [restoreJsonInput, setRestoreJsonInput] = useState('');
+  const [restoring, setRestoring] = useState(false);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
 
   const fetchPendingCount = React.useCallback(async () => {
     if (user?.id) {
@@ -46,6 +57,65 @@ export default function SettingsScreen() {
       await setLanguage(newLang, user?.id);
     } finally {
       setSavingLang(false);
+    }
+  };
+
+  const handleExportBackup = async () => {
+    if (!user?.id) return;
+    try {
+      setExportingBackup(true);
+      const res = await backupService.exportBackup(user.id);
+      if (res.success) {
+        Alert.alert(
+          t.settings.backupSuccessTitle || 'Backup Exported',
+          t.settings.backupSuccessMessage ||
+            'Your business data backup has been generated successfully.',
+        );
+      } else {
+        Alert.alert(t.common.error, res.error || 'Failed to export backup.');
+      }
+    } catch (err) {
+      Alert.alert(t.common.error, (err as Error).message || 'Failed to export backup.');
+    } finally {
+      setExportingBackup(false);
+    }
+  };
+
+  const handleConfirmRestore = async () => {
+    if (!user?.id || !restoreJsonInput.trim()) return;
+
+    // Validate backup format and financial invariants
+    const validation = backupService.validateBackup(restoreJsonInput.trim());
+    if (!validation.valid || !validation.data) {
+      setRestoreError(validation.error || 'Invalid backup data format.');
+      return;
+    }
+
+    try {
+      setRestoring(true);
+      setRestoreError(null);
+
+      const res = await backupService.restoreBackup(validation.data, user.id);
+      if (!res.success) {
+        setRestoreError(res.error || 'Failed to restore backup.');
+        return;
+      }
+
+      // Invalidate queries so all screens refresh with restored data
+      queryClient.invalidateQueries();
+      await fetchPendingCount();
+
+      setIsRestoreModalOpen(false);
+      setRestoreJsonInput('');
+
+      Alert.alert(
+        t.settings.restoreSuccessTitle || 'Restore Completed',
+        `Restored: ${res.invoicesRestored} Invoices, ${res.customersRestored} Customers, ${res.buyersRestored} Buyers, ${res.paymentsRestored} Payments.`,
+      );
+    } catch (err) {
+      setRestoreError((err as Error).message || 'Failed to restore backup.');
+    } finally {
+      setRestoring(false);
     }
   };
 
@@ -214,6 +284,43 @@ export default function SettingsScreen() {
         </View>
       </AppCard>
 
+      {/* Phase 18: Data Backup & Restore Card */}
+      <AppCard>
+        <AppText variant="h4" style={styles.cardSectionTitle}>
+          {t.settings.backupRestore || 'Data Backup & Restore'}
+        </AppText>
+        <AppText
+          variant="caption"
+          color={colors.textSecondary}
+          style={{ marginBottom: spacing.md }}
+        >
+          {t.settings.backupRestoreSubtitle ||
+            'Export or recover your business invoices & ledger records safely'}
+        </AppText>
+
+        <View style={{ gap: spacing.sm }}>
+          <AppButton
+            title={t.settings.exportBackupBtn || 'Backup / Export Data (JSON)'}
+            onPress={handleExportBackup}
+            loading={exportingBackup}
+            disabled={exportingBackup}
+            variant="primary"
+            icon={<Ionicons name="cloud-download-outline" size={18} color={colors.surface} />}
+          />
+
+          <AppButton
+            title={t.settings.restoreBackupBtn || 'Restore Data from Backup'}
+            onPress={() => {
+              setRestoreJsonInput('');
+              setRestoreError(null);
+              setIsRestoreModalOpen(true);
+            }}
+            variant="outline"
+            icon={<Ionicons name="cloud-upload-outline" size={18} color={colors.primary} />}
+          />
+        </View>
+      </AppCard>
+
       {/* Account & Security Card */}
       <AppCard>
         <AppText variant="h4" style={styles.cardSectionTitle}>
@@ -251,6 +358,68 @@ export default function SettingsScreen() {
           </AppText>
         </TouchableOpacity>
       </AppCard>
+
+      {/* Restore Data Modal */}
+      <Modal
+        visible={isRestoreModalOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => {
+          if (!restoring) setIsRestoreModalOpen(false);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <AppText variant="h3">{t.settings.restoreTitle || 'Restore Backup Data'}</AppText>
+              <TouchableOpacity disabled={restoring} onPress={() => setIsRestoreModalOpen(false)}>
+                <Ionicons name="close" size={24} color={colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <AppText
+              variant="caption"
+              color={colors.textSecondary}
+              style={{ marginBottom: spacing.md }}
+            >
+              {t.settings.restoreWarning ||
+                'Restoring data will merge verified backup records with your current account.'}
+            </AppText>
+
+            <AppTextInput
+              label={t.settings.pasteBackupLabel || 'Paste Backup JSON Data *'}
+              placeholder='{"backupVersion": 1, ...}'
+              value={restoreJsonInput}
+              onChangeText={text => {
+                setRestoreJsonInput(text);
+                if (restoreError) setRestoreError(null);
+              }}
+              multiline
+              numberOfLines={6}
+              style={{ height: 120, textAlignVertical: 'top' }}
+              error={restoreError || undefined}
+            />
+
+            <View style={styles.modalActionsRow}>
+              <AppButton
+                title={t.common.cancel}
+                variant="outline"
+                style={{ flex: 1 }}
+                disabled={restoring}
+                onPress={() => setIsRestoreModalOpen(false)}
+              />
+              <AppButton
+                title={t.settings.restoreConfirmBtn || 'Confirm & Restore'}
+                variant="primary"
+                style={{ flex: 1 }}
+                loading={restoring}
+                disabled={restoring || !restoreJsonInput.trim()}
+                onPress={handleConfirmRestore}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </AppScreenContainer>
   );
 }
@@ -330,5 +499,27 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     marginLeft: spacing.sm,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    padding: spacing.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  modalActionsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.md,
   },
 });
