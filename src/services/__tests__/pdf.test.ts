@@ -160,7 +160,7 @@ describe('PHASE 8 & 9 — Professional Invoice PDF Generation & Delivery Tests',
 
       // Items
       expect(html).toContain('Cotton Fabric Roll (White 40m)');
-      expect(html).toContain('Dyeing & Finishing Batch');
+      expect(html).toContain('Dyeing &amp; Finishing Batch');
       expect(html).toContain('₹20,000.00');
       expect(html).toContain('₹9,500.00');
 

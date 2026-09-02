@@ -44,6 +44,15 @@ export function formatInvoiceDate(dateString: string): string {
   return dateString;
 }
 
+function escapeHtml(str: string): string {
+  return (str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export const pdfService = {
   /**
    * Generates clean, professional, non-GST printable HTML for customer-facing invoice.
@@ -57,8 +66,10 @@ export const pdfService = {
     // Format Date: e.g. "02 Sep 2026"
     const formattedDate = formatInvoiceDate(invoice.invoice_date);
 
-    const shopName = profile.shop_name || 'Shayona Enterprise';
+    const rawShopName = profile.shop_name || 'Shayona Enterprise';
+    const shopName = escapeHtml(rawShopName);
     const shopPhone = profile.phone ? formatPhoneDisplay(profile.phone) : '';
+    const partyName = escapeHtml(invoice.party_name);
 
     const grandTotalRupees = paiseToRupees(Number(invoice.total_amount || 0));
     const wordsText = amountInWords(grandTotalRupees, language);
@@ -99,7 +110,7 @@ export const pdfService = {
         return `
           <tr class="item-row">
             <td class="col-num">${index + 1}</td>
-            <td class="col-desc">${item.item_name}</td>
+            <td class="col-desc">${escapeHtml(item.item_name)}</td>
             <td class="col-qty">${itemQty}</td>
             <td class="col-rate">${formatCurrency(Number(item.rate))}</td>
             <td class="col-amount">${formatCurrency(Number(item.amount))}</td>
@@ -427,10 +438,10 @@ export const pdfService = {
           <!-- 3. Customer / Buyer Box -->
           <div class="customer-box">
             <div class="customer-label">${t.partyLabel}</div>
-            <div class="customer-name">${invoice.party_name}</div>
+            <div class="customer-name">${partyName}</div>
           </div>
 
-          <!-- 4. Item Table (Zero GST / Clean Retail) -->
+          <!-- 4. Item Table (Clean Retail Invoice) -->
           <table class="items-table">
             <thead>
               <tr>
