@@ -8,7 +8,6 @@ import { useAuthStore } from '@/src/store/authStore';
 import { authService } from '@/src/services/auth.service';
 import { colors } from '@/src/theme/colors';
 import { AppText } from '@/src/components/common';
-import 'react-native-reanimated';
 
 export default function RootLayout() {
   const router = useRouter();
