@@ -123,9 +123,6 @@ export default function DashboardScreen() {
   ];
 
   const totalInvoices = dashboardData?.totalInvoicesCount || 0;
-  const pendingInvoices = dashboardData?.pendingInvoicesCount || 0;
-  const paidInvoices = Math.max(0, totalInvoices - pendingInvoices);
-  const paidAmountPaise = dashboardData?.totalJamaPaise || 0;
 
   return (
     <AppScreenContainer scrollable={false} edges={['top']}>
@@ -139,7 +136,7 @@ export default function DashboardScreen() {
             accessibilityRole="button"
             accessibilityLabel="Open Navigation Drawer"
           >
-            <Ionicons name="menu-outline" size={28} color="#1E293B" />
+            <Ionicons name="menu-outline" size={26} color="#1E293B" />
           </TouchableOpacity>
           <View style={styles.headerTitleCol}>
             <AppText variant="h3" style={styles.headerTitleText}>
@@ -267,7 +264,7 @@ export default function DashboardScreen() {
                   <AppText variant="captionBold" style={styles.jamaLabel}>
                     {t.dashboard.jamaReceived}
                   </AppText>
-                  <Ionicons name="arrow-down-circle" size={18} color="#16A34A" />
+                  <Ionicons name="arrow-down-circle" size={18} color="#059669" />
                 </View>
                 <AppText variant="h2" style={styles.jamaAmount}>
                   {formatCurrency(dashboardData?.totalJamaPaise || 0)}
@@ -387,7 +384,7 @@ export default function DashboardScreen() {
 
                       {/* Row 2: Customer Name (Left) vs Baki/Paid Badge (Right) */}
                       <View style={styles.invoiceRow2}>
-                        <AppText variant="bodyMedium" style={styles.invPartyName} numberOfLines={1}>
+                        <AppText variant="bodyBold" style={styles.invPartyName} numberOfLines={1}>
                           {inv.party_name}
                         </AppText>
                         <View
@@ -407,9 +404,8 @@ export default function DashboardScreen() {
                         </View>
                       </View>
 
-                      {/* Row 3: Calendar Icon + Formatted Date */}
+                      {/* Row 3: Date */}
                       <View style={styles.invoiceRow3}>
-                        <Ionicons name="calendar-outline" size={13} color="#64748B" />
                         <AppText variant="caption" style={styles.invDateText}>
                           {formatDisplayDate(inv.invoice_date)}
                         </AppText>
@@ -418,59 +414,6 @@ export default function DashboardScreen() {
                   );
                 })
               )}
-            </View>
-
-            {/* 9. Bottom KPI Strip (4 Summary Columns) */}
-            <View style={styles.kpiSummaryStrip}>
-              {/* 1: Total Bills */}
-              <View style={styles.kpiColumn}>
-                <Ionicons name="document-text-outline" size={20} color="#6366F1" />
-                <AppText variant="bodyLargeBold" style={styles.kpiValueText}>
-                  {totalInvoices}
-                </AppText>
-                <AppText variant="caption" style={styles.kpiLabelText}>
-                  Total Bills
-                </AppText>
-              </View>
-
-              <View style={styles.kpiDivider} />
-
-              {/* 2: Pending Bills */}
-              <View style={styles.kpiColumn}>
-                <Ionicons name="time-outline" size={20} color="#EA580C" />
-                <AppText variant="bodyLargeBold" style={styles.kpiValueText}>
-                  {pendingInvoices}
-                </AppText>
-                <AppText variant="caption" style={styles.kpiLabelText}>
-                  Pending Bills
-                </AppText>
-              </View>
-
-              <View style={styles.kpiDivider} />
-
-              {/* 3: Paid Bills */}
-              <View style={styles.kpiColumn}>
-                <Ionicons name="checkmark-circle-outline" size={20} color="#16A34A" />
-                <AppText variant="bodyLargeBold" style={styles.kpiValueText}>
-                  {paidInvoices}
-                </AppText>
-                <AppText variant="caption" style={styles.kpiLabelText}>
-                  Paid Bills
-                </AppText>
-              </View>
-
-              <View style={styles.kpiDivider} />
-
-              {/* 4: Paid Amount */}
-              <View style={styles.kpiColumn}>
-                <Ionicons name="cash-outline" size={20} color="#0284C7" />
-                <AppText variant="bodyLargeBold" style={styles.kpiAmountText}>
-                  {formatCurrency(paidAmountPaise)}
-                </AppText>
-                <AppText variant="caption" style={styles.kpiLabelText}>
-                  Paid Amount
-                </AppText>
-              </View>
             </View>
           </>
         )}
@@ -533,11 +476,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.screenPadding,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
   },
   headerLeft: {
     flexDirection: 'row',
@@ -554,10 +495,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitleText: {
-    fontSize: 19,
+    fontSize: 20,
     fontWeight: '700',
     color: '#0F172A',
-    lineHeight: 23,
+    lineHeight: 24,
   },
   headerSubtitleText: {
     fontSize: 13,
@@ -569,10 +510,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E293B',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 14,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
     paddingVertical: 9,
-    borderRadius: 10,
+    borderRadius: 8,
   },
   newBillBtnText: {
     color: '#FFFFFF',
@@ -582,9 +523,9 @@ const styles = StyleSheet.create({
 
   // Container & Scroll
   scrollContainer: {
-    paddingHorizontal: spacing.screenPadding,
-    paddingTop: 14,
-    paddingBottom: 160,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 36,
   },
 
   // 2. Date Filter Pill Row
@@ -598,15 +539,13 @@ const styles = StyleSheet.create({
   },
   filterPill: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 7,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
   filterPillActive: {
     backgroundColor: '#1E293B',
-    borderWidth: 1,
-    borderColor: '#1E293B',
   },
   filterPillInactive: {
     backgroundColor: '#FFFFFF',
@@ -630,7 +569,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     marginTop: 8,
-    marginBottom: 14,
+    marginBottom: 12,
     paddingHorizontal: 2,
   },
   periodText: {
@@ -661,12 +600,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 18,
+    padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
     elevation: 1,
   },
   totalSalesTopRow: {
@@ -676,23 +615,21 @@ const styles = StyleSheet.create({
   },
   totalSalesLabel: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#64748B',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
     textTransform: 'uppercase',
   },
   billCountBadge: {
     backgroundColor: '#F1F5F9',
     borderRadius: 12,
     paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    paddingVertical: 4,
   },
   billCountBadgeText: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#475569',
+    fontWeight: '600',
+    color: '#64748B',
     textTransform: 'uppercase',
   },
   totalSalesBottomRow: {
@@ -717,22 +654,22 @@ const styles = StyleSheet.create({
   // 6. Jama & Baki Side-by-Side Cards
   jamaBakiContainer: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
     marginBottom: 12,
   },
   jamaCard: {
     flex: 1,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#ECFDF5',
     borderWidth: 1,
-    borderColor: '#DCFCE7',
+    borderColor: '#A7F3D0',
     borderRadius: 16,
     padding: 14,
   },
   bakiCard: {
     flex: 1,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#FFF1F2',
     borderWidth: 1,
-    borderColor: '#FEE2E2',
+    borderColor: '#FECDD3',
     borderRadius: 16,
     padding: 14,
   },
@@ -745,36 +682,36 @@ const styles = StyleSheet.create({
   jamaLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#15803D',
-    letterSpacing: 0.5,
+    color: '#059669',
+    letterSpacing: 0.3,
   },
   bakiLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#B91C1C',
-    letterSpacing: 0.5,
+    color: '#DC2626',
+    letterSpacing: 0.3,
   },
   jamaAmount: {
-    fontSize: 21,
+    fontSize: 22,
     fontWeight: '800',
-    color: '#16A34A',
-    lineHeight: 26,
+    color: '#059669',
+    lineHeight: 28,
   },
   bakiAmount: {
-    fontSize: 21,
+    fontSize: 22,
     fontWeight: '800',
     color: '#DC2626',
-    lineHeight: 26,
+    lineHeight: 28,
   },
   jamaSubtext: {
-    fontSize: 11,
-    color: '#4B5563',
+    fontSize: 12,
+    color: '#64748B',
     fontWeight: '500',
     marginTop: 4,
   },
   bakiSubtext: {
-    fontSize: 11,
-    color: '#4B5563',
+    fontSize: 12,
+    color: '#64748B',
     fontWeight: '500',
     marginTop: 4,
   },
@@ -789,12 +726,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
     elevation: 1,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: '#0F172A',
   },
@@ -805,7 +742,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   viewAllText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#64748B',
   },
@@ -813,13 +750,13 @@ const styles = StyleSheet.create({
   // 7. Quick Action Buttons
   actionButtonsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
     marginTop: 12,
   },
   actionBtnPrimary: {
     flex: 1,
     backgroundColor: '#1E293B',
-    borderRadius: 12,
+    borderRadius: 10,
     paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
@@ -836,7 +773,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 12,
+    borderRadius: 10,
     paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
@@ -851,13 +788,13 @@ const styles = StyleSheet.create({
 
   // 8. Recent Bills Item Rows
   invoiceItemRow: {
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
   invoiceItemRowLast: {
     borderBottomWidth: 0,
-    paddingBottom: 4,
+    paddingBottom: 2,
   },
   invoiceRow1: {
     flexDirection: 'row',
@@ -879,13 +816,11 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   partyTypeBadgeText: {
     fontSize: 10,
-    fontWeight: '700',
-    color: '#475569',
+    fontWeight: '600',
+    color: '#64748B',
   },
   invTotalText: {
     fontSize: 16,
@@ -901,92 +836,38 @@ const styles = StyleSheet.create({
   invPartyName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#334155',
+    color: '#1E293B',
     flex: 1,
     marginRight: 10,
   },
   statusPillBadge: {
-    borderRadius: 8,
-    paddingHorizontal: 8,
+    borderRadius: 12,
+    paddingHorizontal: 10,
     paddingVertical: 3,
-    borderWidth: 1,
   },
   paidStatusPill: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#BBF7D0',
+    backgroundColor: '#ECFDF5',
   },
   paidStatusText: {
-    color: '#16A34A',
-    fontSize: 11,
-    fontWeight: '700',
+    color: '#059669',
+    fontSize: 12,
+    fontWeight: '600',
   },
   bakiStatusPill: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
+    backgroundColor: '#FFF1F2',
   },
   bakiStatusText: {
     color: '#DC2626',
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
   },
   invoiceRow3: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
+    marginTop: 2,
   },
   invDateText: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#94A3B8',
     fontWeight: '500',
-  },
-
-  // 9. KPI Summary Strip (4 Columns)
-  kpiSummaryStrip: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingVertical: 14,
-    paddingHorizontal: 6,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  kpiColumn: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  kpiDivider: {
-    width: 1,
-    height: 36,
-    backgroundColor: '#F1F5F9',
-  },
-  kpiValueText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginTop: 4,
-  },
-  kpiAmountText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginTop: 4,
-  },
-  kpiLabelText: {
-    fontSize: 10,
-    color: '#64748B',
-    fontWeight: '500',
-    marginTop: 2,
-    textAlign: 'center',
   },
 
   // Empty State
