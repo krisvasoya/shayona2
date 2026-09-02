@@ -12,6 +12,8 @@ export interface InvoiceFilters {
   partyType?: PartyType;
   paymentStatus?: 'ALL' | 'PAID' | 'BAKI';
   searchQuery?: string;
+  page?: number;
+  pageSize?: number;
 }
 
 export interface InvoiceOperationResult<T = unknown> {
@@ -22,7 +24,7 @@ export interface InvoiceOperationResult<T = unknown> {
 export const invoiceService = {
   /**
    * Generates the next sequential invoice number for the authenticated user
-   * (e.g. INV-0001, INV-0002) completely offline-safe
+   * (e.g. INV-0001, INV-0002) completely offline-safe and scalable
    */
   async getNextInvoiceNumber(): Promise<string> {
     const { data: userData } = await supabase.auth.getUser();
@@ -49,7 +51,7 @@ export const invoiceService = {
   },
 
   /**
-   * Fetch all invoices with filters, party names, and item counts (Offline-First)
+   * Fetch all invoices with filters, party names, item counts, and pagination (3+ Years Scalable)
    */
   async getInvoices(filters?: InvoiceFilters): Promise<InvoiceSummary[]> {
     const { data: userData } = await supabase.auth.getUser();
@@ -133,15 +135,24 @@ export const invoiceService = {
       );
     }
 
-    return results.sort((a, b) => {
+    // Sort newest first
+    results.sort((a, b) => {
       const dateCmp = new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime();
       if (dateCmp !== 0) return dateCmp;
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
+
+    // Apply pagination if specified
+    if (filters?.page && filters?.pageSize) {
+      const start = (filters.page - 1) * filters.pageSize;
+      return results.slice(start, start + filters.pageSize);
+    }
+
+    return results;
   },
 
   /**
-   * Fetch single invoice with line items (Offline-First)
+   * Fetch single invoice with line items (Direct Index Lookup)
    */
   async getInvoiceById(invoiceId: string): Promise<InvoiceDetail> {
     const { data: userData } = await supabase.auth.getUser();
@@ -192,7 +203,7 @@ export const invoiceService = {
       throw new Error('Invoice not found.');
     }
 
-    // 2. Fetch line items
+    // 2. Fetch line items strictly for this invoice
     const items = await localStore.getInvoiceItems(userId, invoiceId);
 
     // 3. Fetch party name

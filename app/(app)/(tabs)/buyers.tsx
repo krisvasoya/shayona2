@@ -32,6 +32,7 @@ export default function BuyersScreen() {
   const router = useRouter();
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
+  const [displayLimit, setDisplayLimit] = useState(20);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Form State
@@ -227,11 +228,21 @@ export default function BuyersScreen() {
         </View>
       ) : (
         <FlatList
-          data={buyers}
+          data={buyers ? buyers.slice(0, displayLimit) : []}
           keyExtractor={item => item.id}
           renderItem={renderBuyerItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={12}
+          maxToRenderPerBatch={12}
+          windowSize={7}
+          removeClippedSubviews={true}
+          onEndReached={() => {
+            if (buyers && displayLimit < buyers.length) {
+              setDisplayLimit(prev => prev + 20);
+            }
+          }}
+          onEndReachedThreshold={0.5}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}

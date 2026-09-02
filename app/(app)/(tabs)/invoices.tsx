@@ -28,11 +28,14 @@ import { formatCurrency } from '@/src/utils';
 
 type FilterTab = 'ALL' | 'CUSTOMERS' | 'BUYERS' | 'BAKI' | 'PAID';
 
+const PAGE_CHUNK_SIZE = 20;
+
 export default function InvoicesScreen() {
   const router = useRouter();
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<FilterTab>('ALL');
+  const [displayLimit, setDisplayLimit] = useState(PAGE_CHUNK_SIZE);
 
   // Convert tab to query filters
   const partyTypeFilter: PartyType | undefined =
@@ -63,6 +66,14 @@ export default function InvoicesScreen() {
     (sum, inv) => sum + Number(inv.remaining_amount || 0),
     0,
   );
+
+  const paginatedInvoices = invoices ? invoices.slice(0, displayLimit) : [];
+
+  const handleEndReached = () => {
+    if (invoices && displayLimit < invoices.length) {
+      setDisplayLimit(prev => prev + PAGE_CHUNK_SIZE);
+    }
+  };
 
   const renderInvoiceCard = ({ item }: { item: InvoiceSummary }) => {
     const isPaid = Number(item.remaining_amount) === 0;
@@ -215,7 +226,10 @@ export default function InvoicesScreen() {
         <AppTextInput
           placeholder={t.invoices.searchPlaceholder}
           value={searchQuery}
-          onChangeText={setSearchQuery}
+          onChangeText={text => {
+            setSearchQuery(text);
+            setDisplayLimit(PAGE_CHUNK_SIZE);
+          }}
           containerStyle={styles.searchInputContainer}
           style={styles.searchInput}
           autoCapitalize="none"
@@ -233,7 +247,10 @@ export default function InvoicesScreen() {
           <TouchableOpacity
             key={tab}
             style={[styles.filterChip, activeTab === tab && styles.filterChipActive]}
-            onPress={() => setActiveTab(tab)}
+            onPress={() => {
+              setActiveTab(tab);
+              setDisplayLimit(PAGE_CHUNK_SIZE);
+            }}
           >
             <AppText
               variant="captionBold"
@@ -288,11 +305,17 @@ export default function InvoicesScreen() {
         </View>
       ) : (
         <FlatList
-          data={invoices}
+          data={paginatedInvoices}
           keyExtractor={item => item.id}
           renderItem={renderInvoiceCard}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={12}
+          maxToRenderPerBatch={12}
+          windowSize={7}
+          removeClippedSubviews={true}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.5}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
@@ -351,7 +374,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: spacing.sm,
     zIndex: 1,
-    padding: 4,
   },
   filterTabsRow: {
     flexDirection: 'row',
@@ -361,9 +383,11 @@ const styles = StyleSheet.create({
   filterChip: {
     flex: 1,
     paddingVertical: 6,
-    alignItems: 'center',
+    paddingHorizontal: 4,
     borderRadius: borderRadius.round,
     backgroundColor: colors.surfaceSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -390,21 +414,20 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   cardDivider: {
-    height: 0.5,
+    height: 1,
     backgroundColor: colors.borderLight,
     marginVertical: spacing.xs,
   },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginTop: 2,
+    alignItems: 'center',
   },
   centerState: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.xxl,
-    paddingHorizontal: spacing.lg,
+    padding: spacing.xl,
   },
   stateText: {
     marginTop: spacing.sm,
@@ -416,10 +439,9 @@ const styles = StyleSheet.create({
   stateSubtitle: {
     marginTop: spacing.xs,
     textAlign: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   retryBtn: {
-    minWidth: 140,
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
   },
 });

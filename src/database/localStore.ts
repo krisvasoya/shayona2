@@ -5,17 +5,30 @@ function getPartitionKey(userId: string, collection: string): string {
   return `@shayona_user_${userId}_${collection}`;
 }
 
+// In-memory cache for fast, non-blocking synchronous reads
+const inMemoryCache: Record<string, any[]> = {};
+
 export const localStore = {
   // ----------------------------------------------------
-  // Generic Read / Write Helpers (User Partitioned)
+  // Generic Read / Write Helpers (User Partitioned + In-Memory Cache)
   // ----------------------------------------------------
   async getCollection<T>(userId: string, collection: string): Promise<T[]> {
     if (!userId) return [];
+    const key = getPartitionKey(userId, collection);
+
+    if (inMemoryCache[key]) {
+      return inMemoryCache[key] as T[];
+    }
+
     try {
-      const key = getPartitionKey(userId, collection);
       const dataStr = await AsyncStorage.getItem(key);
-      if (!dataStr) return [];
-      return JSON.parse(dataStr) as T[];
+      if (!dataStr) {
+        inMemoryCache[key] = [];
+        return [];
+      }
+      const parsed = JSON.parse(dataStr) as T[];
+      inMemoryCache[key] = parsed;
+      return parsed;
     } catch {
       return [];
     }
@@ -23,11 +36,12 @@ export const localStore = {
 
   async setCollection<T>(userId: string, collection: string, items: T[]): Promise<void> {
     if (!userId) return;
+    const key = getPartitionKey(userId, collection);
+    inMemoryCache[key] = items;
     try {
-      const key = getPartitionKey(userId, collection);
       await AsyncStorage.setItem(key, JSON.stringify(items));
     } catch {
-      // ignore or log
+      // ignore
     }
   },
 
@@ -60,7 +74,6 @@ export const localStore = {
     const localMap = new Map<string, LocalCustomer>();
     localList.forEach(c => localMap.set(c.id, c));
 
-    // Server data updates records unless local has pending mutations
     serverCustomers.forEach(sc => {
       const existing = localMap.get(sc.id);
       if (!existing || existing.sync_status === 'SYNCED') {
@@ -219,7 +232,6 @@ export const localStore = {
 
   async enqueueSyncItem(userId: string, item: SyncQueueItem): Promise<void> {
     const queue = await this.getSyncQueue(userId);
-    // Replace existing pending item for same entity if applicable
     const existingIdx = queue.findIndex(
       q => q.entity_id === item.entity_id && q.entity === item.entity,
     );
@@ -248,14 +260,15 @@ export const localStore = {
 
   async clearUserStore(userId: string): Promise<void> {
     if (!userId) return;
+    const keys = [
+      getPartitionKey(userId, 'customers'),
+      getPartitionKey(userId, 'buyers'),
+      getPartitionKey(userId, 'invoices'),
+      getPartitionKey(userId, 'invoice_items'),
+      getPartitionKey(userId, 'sync_queue'),
+    ];
+    keys.forEach(k => delete inMemoryCache[k]);
     try {
-      const keys = [
-        getPartitionKey(userId, 'customers'),
-        getPartitionKey(userId, 'buyers'),
-        getPartitionKey(userId, 'invoices'),
-        getPartitionKey(userId, 'invoice_items'),
-        getPartitionKey(userId, 'sync_queue'),
-      ];
       await AsyncStorage.multiRemove(keys);
     } catch {
       // ignore

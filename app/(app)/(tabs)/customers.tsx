@@ -37,6 +37,7 @@ export default function CustomersScreen() {
   const router = useRouter();
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
+  const [displayLimit, setDisplayLimit] = useState(20);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Form State
@@ -245,11 +246,21 @@ export default function CustomersScreen() {
         </View>
       ) : (
         <FlatList
-          data={customers}
+          data={customers ? customers.slice(0, displayLimit) : []}
           keyExtractor={item => item.id}
           renderItem={renderCustomerItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={12}
+          maxToRenderPerBatch={12}
+          windowSize={7}
+          removeClippedSubviews={true}
+          onEndReached={() => {
+            if (customers && displayLimit < customers.length) {
+              setDisplayLimit(prev => prev + 20);
+            }
+          }}
+          onEndReachedThreshold={0.5}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
