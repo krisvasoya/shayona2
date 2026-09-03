@@ -7,7 +7,10 @@ import {
   StyleProp,
   ViewStyle,
 } from 'react-native';
-import { cardStyles } from '@/src/theme/cardStyles';
+import { useTheme } from '@/src/theme';
+import { borderRadius } from '@/src/theme/borderRadius';
+import { spacing } from '@/src/theme/spacing';
+import { shadows } from '@/src/theme/shadows';
 
 export type CardVariant = 'default' | 'elevated' | 'flat' | 'jama' | 'baki' | 'neutral';
 
@@ -25,20 +28,69 @@ export const AppCard: React.FC<AppCardProps> = ({
   children,
   ...rest
 }) => {
-  const getVariantStyle = () => {
+  const { colors, isDark } = useTheme();
+
+  const getVariantStyle = (): ViewStyle => {
     switch (variant) {
       case 'elevated':
-        return cardStyles.cardElevated;
+        return {
+          backgroundColor: colors.surface,
+          borderRadius: borderRadius.lg,
+          padding: spacing.cardPadding,
+          borderWidth: isDark ? 1 : 0,
+          borderColor: colors.border,
+          ...(isDark ? {} : shadows.md),
+          marginBottom: spacing.md,
+        };
       case 'flat':
-        return cardStyles.cardFlat;
+        return {
+          backgroundColor: colors.surfaceSubtle,
+          borderRadius: borderRadius.md,
+          padding: spacing.cardPadding,
+          borderWidth: 1,
+          borderColor: colors.border,
+          marginBottom: spacing.md,
+        };
       case 'jama':
-        return cardStyles.metricCardJama;
+        return {
+          backgroundColor: colors.jamaBackground,
+          borderRadius: borderRadius.lg,
+          padding: spacing.cardPadding,
+          borderWidth: 1,
+          borderColor: colors.jamaBorder,
+          ...(isDark ? {} : shadows.sm),
+          marginBottom: spacing.md,
+        };
       case 'baki':
-        return cardStyles.metricCardBaki;
+        return {
+          backgroundColor: colors.bakiBackground,
+          borderRadius: borderRadius.lg,
+          padding: spacing.cardPadding,
+          borderWidth: 1,
+          borderColor: colors.bakiBorder,
+          ...(isDark ? {} : shadows.sm),
+          marginBottom: spacing.md,
+        };
       case 'neutral':
-        return cardStyles.metricCardNeutral;
+        return {
+          backgroundColor: colors.surface,
+          borderRadius: borderRadius.lg,
+          padding: spacing.cardPadding,
+          borderWidth: 1,
+          borderColor: colors.border,
+          ...(isDark ? {} : shadows.sm),
+          marginBottom: spacing.md,
+        };
       default:
-        return cardStyles.card;
+        return {
+          backgroundColor: colors.surface,
+          borderRadius: borderRadius.lg,
+          padding: spacing.cardPadding,
+          borderWidth: 1,
+          borderColor: colors.border,
+          ...(isDark ? {} : shadows.sm),
+          marginBottom: spacing.md,
+        };
     }
   };
 

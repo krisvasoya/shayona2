@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity, StyleProp, ViewStyle } from 'react-
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/theme';
 import { spacing } from '@/src/theme/spacing';
 import { useDrawer } from '@/src/components/navigation/DrawerContext';
 
@@ -30,6 +30,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 }) => {
   const router = useRouter();
   const drawer = useDrawer();
+  const { colors } = useTheme();
 
   const handleBack = () => {
     if (onBack) {
@@ -51,7 +52,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const shouldShowMenu = showMenu !== undefined ? showMenu : !showBack;
 
   return (
-    <View style={[styles.header, style]}>
+    <View
+      style={[
+        styles.header,
+        {
+          backgroundColor: colors.surface,
+          borderBottomColor: colors.border,
+        },
+        style,
+      ]}
+    >
       <View style={styles.leftContainer}>
         {showBack ? (
           <TouchableOpacity
@@ -99,9 +109,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.screenPadding,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
     minHeight: 56,
   },
   leftContainer: {
@@ -110,10 +118,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconButton: {
-    marginRight: spacing.sm,
     padding: spacing.xs,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginRight: spacing.sm,
+    borderRadius: spacing.xs,
   },
   titleContainer: {
     flex: 1,

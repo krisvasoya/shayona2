@@ -13,7 +13,7 @@ import {
   AppTextInput,
   AppModal,
 } from '@/src/components/common';
-import { colors } from '@/src/theme/colors';
+import { colors, useTheme } from '@/src/theme';
 import { spacing } from '@/src/theme/spacing';
 import { borderRadius } from '@/src/theme/borderRadius';
 import { useAuth } from '@/src/features/auth';
@@ -29,6 +29,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { user, profile, signOut, isLoading } = useAuth();
   const { language, setLanguage, t } = useLanguage();
+  const { colors, themeMode, setThemeMode, isDark } = useTheme();
   const queryClient = useQueryClient();
   const isOnline = useNetworkStore(state => state.isOnline);
   const isUpdateAvailable = useUpdateStore(state => state.isUpdateAvailable);
@@ -273,6 +274,138 @@ export default function SettingsScreen() {
               </View>
             </View>
             {language === 'gu' && <AppBadge label="સક્રિય" variant="success" />}
+          </TouchableOpacity>
+        </View>
+      </AppCard>
+
+      {/* Appearance / Theme Preferences Card */}
+      <AppCard>
+        <AppText variant="h4" style={styles.cardSectionTitle}>
+          {t.settings.appearance}
+        </AppText>
+        <AppText variant="caption" color={colors.textSecondary} style={{ marginBottom: spacing.sm }}>
+          {t.settings.appearanceSubtitle}
+        </AppText>
+
+        <View style={styles.languageOptionsContainer}>
+          {/* System Default Option */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={[
+              styles.langChoiceCard,
+              {
+                backgroundColor: themeMode === 'system' ? (isDark ? 'rgba(56, 189, 248, 0.15)' : '#EEF2FF') : colors.surfaceSubtle,
+                borderColor: themeMode === 'system' ? (isDark ? colors.accent : colors.primary) : colors.border,
+              },
+            ]}
+            onPress={() => setThemeMode('system')}
+          >
+            <View style={styles.langChoiceLeft}>
+              <View
+                style={[
+                  styles.radioCircle,
+                  themeMode === 'system' && { borderColor: isDark ? colors.accent : colors.primary },
+                ]}
+              >
+                {themeMode === 'system' && (
+                  <View
+                    style={[
+                      styles.radioInner,
+                      { backgroundColor: isDark ? colors.accent : colors.primary },
+                    ]}
+                  />
+                )}
+              </View>
+              <View style={{ marginLeft: spacing.sm }}>
+                <AppText variant="bodyLargeBold">{t.settings.systemOption}</AppText>
+                <AppText variant="caption" color={colors.textSecondary}>
+                  {t.settings.systemOptionDesc}
+                </AppText>
+              </View>
+            </View>
+            {themeMode === 'system' && (
+              <AppBadge label={language === 'gu' ? 'સક્રિય' : 'Active'} variant="success" />
+            )}
+          </TouchableOpacity>
+
+          {/* Light Theme Option */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={[
+              styles.langChoiceCard,
+              {
+                backgroundColor: themeMode === 'light' ? (isDark ? 'rgba(56, 189, 248, 0.15)' : '#EEF2FF') : colors.surfaceSubtle,
+                borderColor: themeMode === 'light' ? (isDark ? colors.accent : colors.primary) : colors.border,
+              },
+            ]}
+            onPress={() => setThemeMode('light')}
+          >
+            <View style={styles.langChoiceLeft}>
+              <View
+                style={[
+                  styles.radioCircle,
+                  themeMode === 'light' && { borderColor: isDark ? colors.accent : colors.primary },
+                ]}
+              >
+                {themeMode === 'light' && (
+                  <View
+                    style={[
+                      styles.radioInner,
+                      { backgroundColor: isDark ? colors.accent : colors.primary },
+                    ]}
+                  />
+                )}
+              </View>
+              <View style={{ marginLeft: spacing.sm }}>
+                <AppText variant="bodyLargeBold">{t.settings.lightOption}</AppText>
+                <AppText variant="caption" color={colors.textSecondary}>
+                  {t.settings.lightOptionDesc}
+                </AppText>
+              </View>
+            </View>
+            {themeMode === 'light' && (
+              <AppBadge label={language === 'gu' ? 'સક્રિય' : 'Active'} variant="success" />
+            )}
+          </TouchableOpacity>
+
+          {/* Dark Theme Option */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={[
+              styles.langChoiceCard,
+              {
+                backgroundColor: themeMode === 'dark' ? (isDark ? 'rgba(56, 189, 248, 0.15)' : '#EEF2FF') : colors.surfaceSubtle,
+                borderColor: themeMode === 'dark' ? (isDark ? colors.accent : colors.primary) : colors.border,
+              },
+            ]}
+            onPress={() => setThemeMode('dark')}
+          >
+            <View style={styles.langChoiceLeft}>
+              <View
+                style={[
+                  styles.radioCircle,
+                  themeMode === 'dark' && { borderColor: isDark ? colors.accent : colors.primary },
+                ]}
+              >
+                {themeMode === 'dark' && (
+                  <View
+                    style={[
+                      styles.radioInner,
+                      { backgroundColor: isDark ? colors.accent : colors.primary },
+                    ]}
+                  />
+                )}
+              </View>
+              <View style={{ marginLeft: spacing.sm }}>
+                <AppText variant="bodyLargeBold">{t.settings.darkOption}</AppText>
+                <AppText variant="caption" color={colors.textSecondary}>
+                  {t.settings.darkOptionDesc}
+                </AppText>
+              </View>
+            </View>
+            {themeMode === 'dark' && (
+              <AppBadge label={language === 'gu' ? 'સક્રિય' : 'Active'} variant="success" />
+            )}
           </TouchableOpacity>
         </View>
       </AppCard>

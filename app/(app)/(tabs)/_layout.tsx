@@ -3,16 +3,15 @@ import { Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/theme';
 import { useLanguage } from '@/src/localization';
 
 export default function TabLayout() {
   const { t } = useLanguage();
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
-  // Dynamic safe area calculation:
-  // Base content height for icons + labels = 54px
-  // Inset padding for Android/iOS bottom navigation gesture or 3-button bar = insets.bottom
+  // Dynamic safe area calculation preserving bottom navigation clearance
   const bottomInset = insets.bottom;
   const bottomPadding = bottomInset > 0 ? bottomInset : Platform.OS === 'android' ? 8 : 6;
   const tabHeight = 54 + bottomPadding;
@@ -20,7 +19,7 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor: isDark ? colors.accent : colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
           backgroundColor: colors.surface,
@@ -69,7 +68,7 @@ export default function TabLayout() {
         options={{
           title: t.nav.buyers,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="business-outline" size={size} color={color} />
+            <Ionicons name="briefcase-outline" size={size} color={color} />
           ),
         }}
       />

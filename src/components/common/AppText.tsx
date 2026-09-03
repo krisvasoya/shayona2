@@ -6,7 +6,7 @@ import {
   StyleProp,
   TextStyle,
 } from 'react-native';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/theme';
 import { typography } from '@/src/theme/typography';
 
 export interface AppTextProps extends RNTextProps {
@@ -18,15 +18,17 @@ export interface AppTextProps extends RNTextProps {
 
 export const AppText: React.FC<AppTextProps> = ({
   variant = 'body',
-  color = colors.textPrimary,
+  color,
   style,
   children,
   ...rest
 }) => {
+  const { colors } = useTheme();
   const variantStyle = typography[variant] || typography.body;
+  const textColor = color || colors.textPrimary;
 
   return (
-    <RNText style={[styles.base, variantStyle, { color }, style]} {...rest}>
+    <RNText style={[styles.base, variantStyle, { color: textColor }, style]} {...rest}>
       {children}
     </RNText>
   );

@@ -8,7 +8,7 @@ import { useAuthStore } from '@/src/store/authStore';
 import { authService } from '@/src/services/auth.service';
 import { networkService } from '@/src/services/network.service';
 import { syncService } from '@/src/services/sync.service';
-import { colors } from '@/src/theme/colors';
+import { colors, useThemeStore } from '@/src/theme';
 import { AppText } from '@/src/components/common';
 
 export default function RootLayout() {
@@ -35,9 +35,10 @@ export default function RootLayout() {
   const initialize = useAuthStore(state => state.initialize);
   const setSession = useAuthStore(state => state.setSession);
 
-  // Initialize network listener and auth session on mount
+  // Initialize network listener, theme and auth session on mount
   useEffect(() => {
     initialize();
+    useThemeStore.getState().initializeTheme();
     const unsubNetwork = networkService.init();
 
     // Listen to Supabase auth state changes

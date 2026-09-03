@@ -11,7 +11,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/theme';
 import { spacing } from '@/src/theme/spacing';
 import { borderRadius } from '@/src/theme/borderRadius';
 import { AppText } from './AppText';
@@ -35,6 +35,8 @@ export const AppModal: React.FC<AppModalProps> = ({
   scrollContentStyle,
   maxHeight = '88%',
 }) => {
+  const { colors, isDark } = useTheme();
+
   return (
     <Modal
       visible={visible}
@@ -45,7 +47,7 @@ export const AppModal: React.FC<AppModalProps> = ({
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.modalOverlay}
+        style={[styles.modalOverlay, { backgroundColor: colors.backdrop }]}
       >
         <TouchableOpacity
           style={styles.backdrop}
@@ -53,8 +55,19 @@ export const AppModal: React.FC<AppModalProps> = ({
           onPress={onClose}
           accessibilityLabel="Close Modal"
         />
-        <View style={[styles.modalContent, { maxHeight: maxHeight as any }, contentStyle]}>
-          <View style={styles.modalHeader}>
+        <View
+          style={[
+            styles.modalContent,
+            {
+              backgroundColor: colors.surface,
+              maxHeight: maxHeight as any,
+              borderTopWidth: isDark ? 1 : 0,
+              borderTopColor: colors.border,
+            },
+            contentStyle,
+          ]}
+        >
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
             <AppText variant="h3" numberOfLines={1} style={{ flex: 1 }}>
               {title}
             </AppText>
@@ -84,7 +97,6 @@ export const AppModal: React.FC<AppModalProps> = ({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   backdrop: {
@@ -95,7 +107,6 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   modalContent: {
-    backgroundColor: colors.surface,
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     paddingHorizontal: spacing.lg,
@@ -110,16 +121,17 @@ const styles = StyleSheet.create({
   },
   modalHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: spacing.md,
     marginBottom: spacing.md,
-    paddingBottom: spacing.xs,
+    borderBottomWidth: 1,
   },
   closeBtn: {
     padding: spacing.xs,
     marginLeft: spacing.sm,
   },
   scrollBody: {
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.xxl,
   },
 });
