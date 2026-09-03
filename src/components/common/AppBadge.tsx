@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, StyleProp, ViewStyle, TextStyle } from 'react-native';
 import { AppText } from './AppText';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/theme';
 import { borderRadius } from '@/src/theme/borderRadius';
 import { spacing } from '@/src/theme/spacing';
 import { fontSize, fontWeight } from '@/src/theme/typography';
@@ -21,32 +21,34 @@ export const AppBadge: React.FC<AppBadgeProps> = ({
   style,
   textStyle,
 }) => {
+  const { colors } = useTheme();
+
   const getVariantStyles = () => {
     switch (variant) {
       case 'jama':
         return {
-          container: { backgroundColor: colors.jamaBackground, borderColor: '#A7F3D0' },
+          container: { backgroundColor: colors.jamaBackground, borderColor: colors.jamaBorder },
           text: { color: colors.jama },
         };
       case 'baki':
       case 'danger':
         return {
-          container: { backgroundColor: colors.bakiBackground, borderColor: '#FECACA' },
+          container: { backgroundColor: colors.bakiBackground, borderColor: colors.bakiBorder },
           text: { color: colors.baki },
         };
       case 'success':
         return {
-          container: { backgroundColor: colors.successBackground, borderColor: '#BBF7D0' },
+          container: { backgroundColor: colors.successBackground, borderColor: colors.jamaBorder },
           text: { color: colors.success },
         };
       case 'warning':
         return {
-          container: { backgroundColor: colors.warningBackground, borderColor: '#FDE68A' },
+          container: { backgroundColor: colors.warningBackground, borderColor: colors.warning },
           text: { color: colors.warning },
         };
       case 'info':
         return {
-          container: { backgroundColor: colors.infoBackground, borderColor: '#BAE6FD' },
+          container: { backgroundColor: colors.infoBackground, borderColor: colors.info },
           text: { color: colors.info },
         };
       default:

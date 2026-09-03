@@ -225,6 +225,15 @@ export const translations = {
       confirmLogoutTitle: 'Confirm Logout',
       confirmLogoutMessage: 'Are you sure you want to logout from your account?',
       editBusinessProfile: 'Edit Business Profile',
+      appearance: 'Appearance & Theme',
+      appearanceSubtitle: 'Choose your preferred app appearance',
+      theme: 'Theme',
+      lightOption: 'Light',
+      lightOptionDesc: 'Classic crisp light appearance',
+      darkOption: 'Dark',
+      darkOptionDesc: 'Elegant, low-light dark appearance',
+      systemOption: 'System Default',
+      systemOptionDesc: 'Match device system appearance',
     },
 
     // Business Profile
@@ -535,6 +544,15 @@ export const translations = {
       confirmLogoutTitle: 'લોગઆઉટ પુષ્ટિ',
       confirmLogoutMessage: 'શું તમે ખરેખર એકાઉન્ટમાંથી લોગઆઉટ કરવા માંગો છો?',
       editBusinessProfile: 'દુકાન પ્રોફાઇલમાં ફેરફાર કરો',
+      appearance: 'દેખાવ અને થીમ (Appearance & Theme)',
+      appearanceSubtitle: 'એપનો મનપસંદ દેખાવ પસંદ કરો',
+      theme: 'થીમ (Theme)',
+      lightOption: 'લાઇટ મોડ (Light)',
+      lightOptionDesc: 'પ્રમાણભૂત તેજસ્વી દેખાવ',
+      darkOption: 'ડાર્ક મોડ (Dark)',
+      darkOptionDesc: 'આંખો માટે અનુકૂળ ડાર્ક દેખાવ',
+      systemOption: 'સિસ્ટમ ડિફોલ્ટ (System Default)',
+      systemOptionDesc: 'મોબાઇલ સિસ્ટમ મુજબ આપમેળે સેટ કરો',
     },
 
     // Business Profile

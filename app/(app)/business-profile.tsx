@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -12,7 +12,6 @@ import {
 } from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
 import { spacing } from '@/src/theme/spacing';
-import { borderRadius } from '@/src/theme/borderRadius';
 import { useAuth } from '@/src/features/auth';
 import { useLanguage } from '@/src/localization';
 import { authService } from '@/src/services/auth.service';

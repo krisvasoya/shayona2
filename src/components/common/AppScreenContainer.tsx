@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, NativeSafeAreaViewProps } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/theme';
 import { spacing } from '@/src/theme/spacing';
 import { useNetworkStore } from '@/src/services/network.service';
 import { useLanguage } from '@/src/localization';
@@ -34,23 +34,41 @@ export const AppScreenContainer: React.FC<AppScreenContainerProps> = ({
   header,
   style,
   contentContainerStyle,
-  backgroundColor = colors.background,
+  backgroundColor,
   edges = ['top'],
   disableDefaultPadding = false,
 }) => {
+  const { colors, isDark } = useTheme();
   const isOnline = useNetworkStore(state => state.isOnline);
   const { t } = useLanguage();
 
+  const containerBg = backgroundColor || colors.background;
+
   return (
-    <SafeAreaView edges={edges} style={[styles.safeArea, { backgroundColor }]}>
+    <SafeAreaView edges={edges} style={[styles.safeArea, { backgroundColor: containerBg }]}>
       <StatusBar
-        barStyle="dark-content"
+        barStyle={isDark ? 'light-content' : 'dark-content'}
         backgroundColor={Platform.OS === 'android' ? colors.surface : undefined}
       />
       {!isOnline && (
-        <View style={styles.offlineBanner}>
-          <Ionicons name="cloud-offline-outline" size={14} color="#92400E" />
-          <AppText variant="caption" style={styles.offlineText}>
+        <View
+          style={[
+            styles.offlineBanner,
+            {
+              backgroundColor: isDark ? 'rgba(217, 119, 6, 0.2)' : '#FEF3C7',
+              borderBottomColor: isDark ? 'rgba(217, 119, 6, 0.4)' : '#FDE68A',
+            },
+          ]}
+        >
+          <Ionicons
+            name="cloud-offline-outline"
+            size={14}
+            color={isDark ? colors.warning : '#92400E'}
+          />
+          <AppText
+            variant="caption"
+            style={[styles.offlineText, { color: isDark ? colors.warning : '#92400E' }]}
+          >
             {t.common.offlineMode}
           </AppText>
         </View>
@@ -98,15 +116,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FEF3C7',
     paddingVertical: 4,
     paddingHorizontal: spacing.sm,
     gap: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#FDE68A',
   },
   offlineText: {
-    color: '#92400E',
     fontWeight: '600',
     fontSize: 11,
   },

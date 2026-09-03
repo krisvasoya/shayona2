@@ -18,7 +18,7 @@ import {
   AppModal,
 } from '@/src/components/common';
 import { useDrawer } from '@/src/components/navigation/DrawerContext';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/theme';
 import { spacing } from '@/src/theme/spacing';
 import { borderRadius } from '@/src/theme/borderRadius';
 import { formatCurrency } from '@/src/utils';
@@ -63,6 +63,8 @@ export default function DashboardScreen() {
   const drawer = useDrawer();
   const { profile } = useAuth();
   const { t } = useLanguage();
+  const { colors, isDark } = useTheme();
+
   const shopName = profile?.shop_name || 'Shayona';
 
   const [activeFilter, setActiveFilter] = useState<DateFilter>('TODAY');
@@ -130,9 +132,22 @@ export default function DashboardScreen() {
   const totalInvoices = dashboardData?.totalInvoicesCount || 0;
 
   return (
-    <AppScreenContainer scrollable={false} edges={['top']}>
+    <AppScreenContainer
+      scrollable={false}
+      disableDefaultPadding={true}
+      edges={['top']}
+      backgroundColor={colors.background}
+    >
       {/* 1. Header Row */}
-      <View style={styles.header}>
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: colors.surface,
+            borderBottomColor: colors.border,
+          },
+        ]}
+      >
         <View style={styles.headerLeft}>
           <TouchableOpacity
             onPress={() => drawer?.openDrawer()}
@@ -141,13 +156,17 @@ export default function DashboardScreen() {
             accessibilityRole="button"
             accessibilityLabel="Open Navigation Drawer"
           >
-            <Ionicons name="menu-outline" size={26} color="#1E293B" />
+            <Ionicons name="menu-outline" size={26} color={colors.textPrimary} />
           </TouchableOpacity>
           <View style={styles.headerTitleCol}>
-            <AppText variant="h3" style={styles.headerTitleText}>
+            <AppText variant="h3" style={[styles.headerTitleText, { color: colors.textPrimary }]}>
               {t.dashboard.title}
             </AppText>
-            <AppText variant="caption" style={styles.headerSubtitleText} numberOfLines={1}>
+            <AppText
+              variant="caption"
+              style={[styles.headerSubtitleText, { color: colors.textSecondary }]}
+              numberOfLines={1}
+            >
               {shopName}
             </AppText>
           </View>
@@ -155,23 +174,34 @@ export default function DashboardScreen() {
 
         <TouchableOpacity
           activeOpacity={0.8}
-          style={styles.newBillBtn}
+          style={[
+            styles.newBillBtn,
+            { backgroundColor: isDark ? colors.accent : colors.primary },
+          ]}
           onPress={() => router.push('/(app)/invoices/create')}
         >
+          <Ionicons name="add" size={18} color="#FFFFFF" style={{ marginRight: 2 }} />
           <AppText variant="bodyLargeBold" style={styles.newBillBtnText}>
-            {t.dashboard.newBill || '+ New Bill'}
+            {t.dashboard.newBill || 'New Bill'}
           </AppText>
         </TouchableOpacity>
       </View>
 
+      {/* 2. Main Scrollable Content */}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} colors={[colors.primary]} />
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={refetch}
+            colors={[isDark ? colors.accent : colors.primary]}
+            tintColor={isDark ? colors.accent : colors.primary}
+          />
         }
       >
-        {/* 2. Date Filter Tabs (Horizontal Pill Scroll) */}
+        {/* Date Filter Tabs (Horizontal Pill Scroll) */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -187,12 +217,22 @@ export default function DashboardScreen() {
                 onPress={() => handleSelectFilter(item.key)}
                 style={[
                   styles.filterPill,
-                  isActive ? styles.filterPillActive : styles.filterPillInactive,
+                  {
+                    backgroundColor: isActive
+                      ? isDark
+                        ? colors.accent
+                        : colors.primary
+                      : colors.surface,
+                    borderColor: isActive ? 'transparent' : colors.border,
+                  },
                 ]}
               >
                 <AppText
                   variant="captionBold"
-                  style={isActive ? styles.filterPillTextActive : styles.filterPillTextInactive}
+                  style={{
+                    color: isActive ? '#FFFFFF' : colors.textSecondary,
+                    fontWeight: isActive ? '700' : '500',
+                  }}
                 >
                   {item.label}
                 </AppText>
@@ -201,24 +241,29 @@ export default function DashboardScreen() {
           })}
         </ScrollView>
 
-        {/* 3. Active Period Display */}
+        {/* Selected Period Badge */}
         <View style={styles.periodRow}>
-          <Ionicons name="calendar-outline" size={15} color="#64748B" />
-          <AppText variant="caption" style={styles.periodText}>
+          <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
+          <AppText variant="caption" style={[styles.periodText, { color: colors.textSecondary }]}>
             {t.dashboard.period}: {currentRange.startDate} to {currentRange.endDate}
           </AppText>
         </View>
 
-        {/* 4. Loading State */}
+        {/* Loading / Error / Data States */}
         {isLoading && !isRefetching ? (
           <View style={styles.centerLoadingState}>
-            <ActivityIndicator size="large" color="#1E293B" />
+            <ActivityIndicator size="large" color={isDark ? colors.accent : colors.primary} />
             <AppText variant="body" color={colors.textSecondary} style={{ marginTop: spacing.sm }}>
               {t.dashboard.calculating}
             </AppText>
           </View>
         ) : isError ? (
-          <View style={styles.errorCard}>
+          <View
+            style={[
+              styles.errorCard,
+              { backgroundColor: colors.surface, borderColor: colors.danger },
+            ]}
+          >
             <Ionicons name="alert-circle-outline" size={32} color={colors.danger} />
             <AppText
               variant="bodyLargeBold"
@@ -238,43 +283,83 @@ export default function DashboardScreen() {
           </View>
         ) : (
           <>
-            {/* 5. Total Billed Sales Card */}
-            <View style={styles.totalSalesCard}>
+            {/* 3. Total Billed Sales Card */}
+            <View
+              style={[
+                styles.totalSalesCard,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
               <View style={styles.totalSalesTopRow}>
-                <AppText variant="captionBold" style={styles.totalSalesLabel}>
+                <AppText
+                  variant="captionBold"
+                  style={[styles.totalSalesLabel, { color: colors.textSecondary }]}
+                >
                   {t.dashboard.totalBilledSales}
                 </AppText>
-                <View style={styles.billCountBadge}>
-                  <AppText variant="captionBold" style={styles.billCountBadgeText}>
+                <View
+                  style={[
+                    styles.billCountBadge,
+                    {
+                      backgroundColor: isDark
+                        ? 'rgba(56, 189, 248, 0.15)'
+                        : 'rgba(30, 41, 59, 0.08)',
+                    },
+                  ]}
+                >
+                  <AppText
+                    variant="captionBold"
+                    style={{
+                      color: isDark ? colors.accent : colors.primary,
+                      fontSize: 12,
+                    }}
+                  >
                     {`${totalInvoices} ${totalInvoices === 1 ? t.dashboard.bill : t.dashboard.bills}`}
                   </AppText>
                 </View>
               </View>
 
               <View style={styles.totalSalesBottomRow}>
-                <AppText variant="h1" style={styles.totalSalesAmount}>
+                <AppText
+                  variant="h1"
+                  style={[styles.totalSalesAmount, { color: colors.textPrimary }]}
+                >
                   {formatCurrency(dashboardData?.totalBilledPaise || 0)}
                 </AppText>
-                <AppText variant="caption" style={styles.inSelectedPeriodText}>
+                <AppText variant="caption" style={{ color: colors.textMuted, marginTop: 2 }}>
                   {t.dashboard.inSelectedPeriod}
                 </AppText>
               </View>
             </View>
 
-            {/* 6. Jama & Baki Side-by-Side Cards */}
+            {/* 4. Jama & Baki 2-Column Row */}
             <View style={styles.jamaBakiContainer}>
-              {/* Jama / Received Card */}
-              <View style={styles.jamaCard}>
-                <View style={styles.cardHeaderRow}>
-                  <AppText variant="captionBold" style={styles.jamaLabel}>
+              {/* Jama Card */}
+              <View
+                style={[
+                  styles.metricCard,
+                  {
+                    backgroundColor: colors.jamaBackground,
+                    borderColor: colors.jamaBorder,
+                  },
+                ]}
+              >
+                <View style={styles.metricCardHeader}>
+                  <AppText
+                    variant="captionBold"
+                    style={[styles.metricLabel, { color: colors.jama }]}
+                  >
                     {t.dashboard.jamaReceived}
                   </AppText>
-                  <Ionicons name="arrow-down-circle" size={18} color="#059669" />
+                  <Ionicons name="arrow-down-circle" size={18} color={colors.jama} />
                 </View>
-                <AppText variant="h2" style={styles.jamaAmount}>
+                <AppText variant="h2" style={[styles.metricAmount, { color: colors.jama }]}>
                   {formatCurrency(dashboardData?.totalJamaPaise || 0)}
                 </AppText>
-                <AppText variant="caption" style={styles.jamaSubtext}>
+                <AppText variant="caption" style={[styles.metricSubtext, { color: colors.jama }]}>
                   {dashboardData?.paidTransactionsCount || 0}{' '}
                   {dashboardData?.paidTransactionsCount === 1
                     ? t.dashboard.transaction
@@ -282,57 +367,104 @@ export default function DashboardScreen() {
                 </AppText>
               </View>
 
-              {/* Baki / Due Card */}
-              <View style={styles.bakiCard}>
-                <View style={styles.cardHeaderRow}>
-                  <AppText variant="captionBold" style={styles.bakiLabel}>
+              {/* Baki Card */}
+              <View
+                style={[
+                  styles.metricCard,
+                  {
+                    backgroundColor: colors.bakiBackground,
+                    borderColor: colors.bakiBorder,
+                  },
+                ]}
+              >
+                <View style={styles.metricCardHeader}>
+                  <AppText
+                    variant="captionBold"
+                    style={[styles.metricLabel, { color: colors.baki }]}
+                  >
                     {t.dashboard.bakiPending}
                   </AppText>
-                  <Ionicons name="alert-circle" size={18} color="#DC2626" />
+                  <Ionicons name="alert-circle" size={18} color={colors.baki} />
                 </View>
-                <AppText variant="h2" style={styles.bakiAmount}>
+                <AppText variant="h2" style={[styles.metricAmount, { color: colors.baki }]}>
                   {formatCurrency(dashboardData?.totalBakiPaise || 0)}
                 </AppText>
-                <AppText variant="caption" style={styles.bakiSubtext}>
+                <AppText variant="caption" style={[styles.metricSubtext, { color: colors.baki }]}>
                   {dashboardData?.pendingInvoicesCount || 0} {t.dashboard.pending}
                 </AppText>
               </View>
             </View>
 
-            {/* 6b. Expenses Card (Phase 23) */}
+            {/* 5. Expenses Card */}
             <TouchableOpacity
               activeOpacity={0.8}
-              style={styles.expensesCard}
+              style={[
+                styles.expensesCard,
+                {
+                  backgroundColor: isDark ? 'rgba(245, 158, 11, 0.12)' : '#FFFBEB',
+                  borderColor: isDark ? '#78350F' : '#FDE68A',
+                },
+              ]}
               onPress={() => router.push('/(app)/expenses' as any)}
             >
-              <View style={styles.cardHeaderRow}>
+              <View style={styles.expensesTopRow}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="wallet-outline" size={16} color="#B45309" />
-                  <AppText variant="captionBold" style={styles.expensesLabel}>
+                  <Ionicons name="wallet-outline" size={18} color={isDark ? '#FBBF24' : '#B45309'} />
+                  <AppText
+                    variant="captionBold"
+                    style={{
+                      color: isDark ? '#FBBF24' : '#B45309',
+                      fontSize: 13,
+                      letterSpacing: 0.5,
+                    }}
+                  >
                     {t.dashboard.expenses}
                   </AppText>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                <Ionicons name="chevron-forward" size={18} color={isDark ? '#FBBF24' : '#B45309'} />
               </View>
               <View style={styles.expensesBottomRow}>
-                <AppText variant="h2" style={styles.expensesAmount}>
+                <AppText
+                  variant="h2"
+                  style={[
+                    styles.expensesAmount,
+                    { color: isDark ? '#FBBF24' : '#92400E' },
+                  ]}
+                >
                   {formatCurrency(dashboardData?.totalExpensesPaise || 0)}
                 </AppText>
-                <AppText variant="caption" style={styles.inSelectedPeriodText}>
+                <AppText variant="caption" style={{ color: colors.textMuted, marginTop: 2 }}>
                   {t.dashboard.inSelectedPeriod}
                 </AppText>
               </View>
             </TouchableOpacity>
 
-            {/* 7. Quick Actions Card */}
-            <View style={styles.standardCard}>
-              <AppText variant="h4" style={styles.sectionTitle}>
+            {/* 6. Quick Actions Card */}
+            <View
+              style={[
+                styles.quickActionsCard,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <AppText
+                variant="h4"
+                style={[styles.sectionTitle, { color: colors.textPrimary }]}
+              >
                 {t.dashboard.quickActions}
               </AppText>
               <View style={styles.actionButtonsRow}>
                 <TouchableOpacity
                   activeOpacity={0.8}
-                  style={styles.actionBtnPrimary}
+                  style={[
+                    styles.actionBtn,
+                    {
+                      backgroundColor: isDark ? colors.accent : colors.primary,
+                      flex: 1,
+                    },
+                  ]}
                   onPress={() => router.push('/(app)/invoices/create')}
                 >
                   <Ionicons name="document-text-outline" size={18} color="#FFFFFF" />
@@ -343,25 +475,50 @@ export default function DashboardScreen() {
 
                 <TouchableOpacity
                   activeOpacity={0.8}
-                  style={styles.actionBtnSecondary}
+                  style={[
+                    styles.actionBtn,
+                    {
+                      backgroundColor: colors.surfaceSubtle,
+                      borderColor: colors.border,
+                      borderWidth: 1,
+                      flex: 1,
+                    },
+                  ]}
                   onPress={() => router.push('/(app)/(tabs)/invoices')}
                 >
-                  <Ionicons name="eye-outline" size={18} color="#0F172A" />
-                  <AppText variant="bodyLargeBold" style={styles.actionBtnSecondaryText}>
+                  <Ionicons name="eye-outline" size={18} color={colors.textPrimary} />
+                  <AppText
+                    variant="bodyLargeBold"
+                    style={[styles.actionBtnSecondaryText, { color: colors.textPrimary }]}
+                  >
                     {t.dashboard.viewInvoices}
                   </AppText>
                 </TouchableOpacity>
               </View>
             </View>
 
-            {/* 8. Recent Bills Card */}
-            <View style={styles.standardCard}>
+            {/* 7. Recent Bills Card */}
+            <View
+              style={[
+                styles.recentBillsCard,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
               <View style={styles.sectionHeaderRow}>
-                <AppText variant="h4" style={styles.sectionTitle}>
+                <AppText
+                  variant="h4"
+                  style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 0 }]}
+                >
                   {t.dashboard.recentBills}
                 </AppText>
                 <TouchableOpacity onPress={() => router.push('/(app)/(tabs)/invoices')}>
-                  <AppText variant="captionBold" style={styles.viewAllText}>
+                  <AppText
+                    variant="captionBold"
+                    style={{ color: isDark ? colors.accent : colors.primary }}
+                  >
                     {t.dashboard.viewAll}
                   </AppText>
                 </TouchableOpacity>
@@ -369,7 +526,7 @@ export default function DashboardScreen() {
 
               {!dashboardData?.recentInvoices || dashboardData.recentInvoices.length === 0 ? (
                 <View style={styles.emptyState}>
-                  <Ionicons name="receipt-outline" size={36} color="#94A3B8" />
+                  <Ionicons name="receipt-outline" size={36} color={colors.textMuted} />
                   <AppText
                     variant="bodyMedium"
                     color={colors.textSecondary}
@@ -392,40 +549,79 @@ export default function DashboardScreen() {
                     <TouchableOpacity
                       key={inv.id}
                       activeOpacity={0.7}
-                      style={[styles.invoiceItemRow, isLast && styles.invoiceItemRowLast]}
+                      style={[
+                        styles.invoiceItemRow,
+                        { borderBottomColor: colors.border },
+                        isLast && { borderBottomWidth: 0 },
+                      ]}
                       onPress={() => router.push(`/(app)/invoices/${inv.id}` as any)}
                     >
-                      {/* Row 1: Invoice # + Party Type Badge (Left) vs Total Amount (Right) */}
+                      {/* Row 1: Invoice # + Party Badge (Left) vs Total Amount (Right) */}
                       <View style={styles.invoiceRow1}>
                         <View style={styles.invoiceRow1Left}>
-                          <AppText variant="bodyLargeBold" style={styles.invNumberText}>
+                          <AppText
+                            variant="bodyLargeBold"
+                            style={{ color: colors.textPrimary }}
+                          >
                             #{inv.invoice_number}
                           </AppText>
-                          <View style={styles.partyTypeBadge}>
-                            <AppText variant="captionBold" style={styles.partyTypeBadgeText}>
+                          <View
+                            style={[
+                              styles.partyTypeBadge,
+                              {
+                                backgroundColor: isDark
+                                  ? 'rgba(56, 189, 248, 0.15)'
+                                  : 'rgba(30, 41, 59, 0.08)',
+                              },
+                            ]}
+                          >
+                            <AppText
+                              variant="captionBold"
+                              style={{
+                                color: isDark ? colors.accent : colors.primary,
+                                fontSize: 10,
+                              }}
+                            >
                               {inv.party_type === 'CUSTOMER' ? 'CUSTOMER' : 'BUYER'}
                             </AppText>
                           </View>
                         </View>
-                        <AppText variant="bodyLargeBold" style={styles.invTotalText}>
+                        <AppText
+                          variant="bodyLargeBold"
+                          style={{ color: colors.textPrimary }}
+                        >
                           {formatCurrency(Number(inv.total_amount))}
                         </AppText>
                       </View>
 
                       {/* Row 2: Customer Name (Left) vs Baki/Paid Badge (Right) */}
                       <View style={styles.invoiceRow2}>
-                        <AppText variant="bodyBold" style={styles.invPartyName} numberOfLines={1}>
+                        <AppText
+                          variant="bodyBold"
+                          style={[styles.invPartyName, { color: colors.textPrimary }]}
+                          numberOfLines={1}
+                        >
                           {inv.party_name}
                         </AppText>
                         <View
                           style={[
                             styles.statusPillBadge,
-                            isPaid ? styles.paidStatusPill : styles.bakiStatusPill,
+                            {
+                              backgroundColor: isPaid
+                                ? colors.jamaBackground
+                                : colors.bakiBackground,
+                              borderColor: isPaid
+                                ? colors.jamaBorder
+                                : colors.bakiBorder,
+                            },
                           ]}
                         >
                           <AppText
                             variant="captionBold"
-                            style={isPaid ? styles.paidStatusText : styles.bakiStatusText}
+                            style={{
+                              color: isPaid ? colors.jama : colors.baki,
+                              fontSize: 11,
+                            }}
                           >
                             {isPaid
                               ? 'PAID'
@@ -436,7 +632,10 @@ export default function DashboardScreen() {
 
                       {/* Row 3: Date */}
                       <View style={styles.invoiceRow3}>
-                        <AppText variant="caption" style={styles.invDateText}>
+                        <AppText
+                          variant="caption"
+                          style={{ color: colors.textMuted, fontSize: 11 }}
+                        >
                           {formatDisplayDate(inv.invoice_date)}
                         </AppText>
                       </View>
@@ -495,8 +694,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -505,7 +704,7 @@ const styles = StyleSheet.create({
   },
   hamburgerBtn: {
     marginRight: 12,
-    padding: 2,
+    padding: 4,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -515,38 +714,35 @@ const styles = StyleSheet.create({
   headerTitleText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#0F172A',
     lineHeight: 24,
   },
   headerSubtitleText: {
     fontSize: 13,
-    color: '#64748B',
     fontWeight: '500',
     marginTop: 1,
   },
   newBillBtn: {
-    backgroundColor: '#1E293B',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: borderRadius.md,
   },
   newBillBtnText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
 
-  // Container & Scroll
-  scrollContainer: {
+  // 2. Scrollable Container
+  scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 120,
+    paddingTop: 12,
+    paddingBottom: 120, // Clean clearance for bottom navigation
   },
 
-  // 2. Date Filter Pill Row
+  // 3. Filter Pills
   filterScroll: {
     marginBottom: 4,
   },
@@ -559,29 +755,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 7,
     borderRadius: 20,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  filterPillActive: {
-    backgroundColor: '#1E293B',
-  },
-  filterPillInactive: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  filterPillTextActive: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  filterPillTextInactive: {
-    color: '#334155',
-    fontSize: 13,
-    fontWeight: '500',
-  },
 
-  // 3. Period Row
+  // 4. Period Row
   periodRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -591,356 +770,215 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   periodText: {
-    fontSize: 13,
-    color: '#64748B',
+    fontSize: 12,
     fontWeight: '500',
-  },
-
-  // 4. Loading & Error
-  centerLoadingState: {
-    paddingVertical: spacing.xxl,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  errorCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#FEE2E2',
-    alignItems: 'center',
-    padding: spacing.lg,
-    marginVertical: spacing.md,
   },
 
   // 5. Total Billed Sales Card
   totalSalesCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: borderRadius.lg,
+    padding: spacing.cardPadding,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 2,
-    elevation: 1,
   },
   totalSalesTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 6,
   },
   totalSalesLabel: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   billCountBadge: {
-    backgroundColor: '#F1F5F9',
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  billCountBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#64748B',
-    textTransform: 'uppercase',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   totalSalesBottomRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginTop: 8,
+    marginTop: 2,
   },
   totalSalesAmount: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#0F172A',
-    lineHeight: 34,
-  },
-  inSelectedPeriodText: {
-    fontSize: 12,
-    color: '#64748B',
-    textAlign: 'right',
-    marginBottom: 2,
+    letterSpacing: -0.5,
   },
 
-  // 6. Jama & Baki Side-by-Side Cards
+  // 6. Jama & Baki 2-Column Container
   jamaBakiContainer: {
     flexDirection: 'row',
     gap: 12,
     marginBottom: 12,
   },
-  jamaCard: {
+  metricCard: {
     flex: 1,
-    backgroundColor: '#ECFDF5',
+    borderRadius: borderRadius.lg,
+    padding: spacing.cardPadding,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
-    borderRadius: 16,
-    padding: 14,
   },
-  bakiCard: {
-    flex: 1,
-    backgroundColor: '#FFF1F2',
-    borderWidth: 1,
-    borderColor: '#FECDD3',
-    borderRadius: 16,
-    padding: 14,
-  },
-  cardHeaderRow: {
+  metricCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 6,
   },
-  jamaLabel: {
+  metricLabel: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#059669',
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
-  bakiLabel: {
+  metricAmount: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  metricSubtext: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#DC2626',
-    letterSpacing: 0.3,
-  },
-  jamaAmount: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#059669',
-    lineHeight: 28,
-  },
-  bakiAmount: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#DC2626',
-    lineHeight: 28,
-  },
-  jamaSubtext: {
-    fontSize: 12,
-    color: '#64748B',
     fontWeight: '500',
-    marginTop: 4,
+    opacity: 0.85,
   },
-  bakiSubtext: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '500',
-    marginTop: 4,
-  },
+
+  // 7. Expenses Card
   expensesCard: {
-    backgroundColor: '#FFFBEB',
+    borderRadius: borderRadius.lg,
+    padding: spacing.cardPadding,
     borderWidth: 1,
-    borderColor: '#FDE68A',
-    borderRadius: 16,
-    padding: 14,
     marginBottom: 12,
   },
-  expensesLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#B45309',
-    letterSpacing: 0.3,
-  },
-  expensesBottomRow: {
+  expensesTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginTop: 4,
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  expensesBottomRow: {
+    marginTop: 2,
   },
   expensesAmount: {
     fontSize: 22,
-    fontWeight: '800',
-    color: '#B45309',
-    lineHeight: 28,
+    fontWeight: '700',
   },
 
-  // Common Standard Card
-  standardCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+  // 8. Quick Actions Card
+  quickActionsCard: {
+    borderRadius: borderRadius.lg,
+    padding: spacing.cardPadding,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 2,
-    elevation: 1,
   },
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#0F172A',
+    marginBottom: 10,
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: borderRadius.md,
+    gap: 6,
+    minHeight: 46,
+  },
+  actionBtnPrimaryText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  actionBtnSecondaryText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+
+  // 9. Recent Bills Card
+  recentBillsCard: {
+    borderRadius: borderRadius.lg,
+    padding: spacing.cardPadding,
+    borderWidth: 1,
+    marginBottom: 12,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  viewAllText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-
-  // 7. Quick Action Buttons
-  actionButtonsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 12,
-  },
-  actionBtnPrimary: {
-    flex: 1,
-    backgroundColor: '#1E293B',
-    borderRadius: 10,
-    paddingVertical: 14,
-    flexDirection: 'row',
+  emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    paddingVertical: 24,
   },
-  actionBtnPrimaryText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+  emptyText: {
+    marginVertical: 8,
+    textAlign: 'center',
   },
-  actionBtnSecondary: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  actionBtnSecondaryText: {
-    color: '#0F172A',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-
-  // 8. Recent Bills Item Rows
   invoiceItemRow: {
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  invoiceItemRowLast: {
-    borderBottomWidth: 0,
-    paddingBottom: 2,
   },
   invoiceRow1: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 4,
   },
   invoiceRow1Left: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  invNumberText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
+    gap: 6,
   },
   partyTypeBadge: {
-    backgroundColor: '#F1F5F9',
-    borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
-  },
-  partyTypeBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  invTotalText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
+    borderRadius: 4,
   },
   invoiceRow2: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 4,
+    marginBottom: 2,
   },
   invPartyName: {
+    flex: 1,
+    marginRight: 8,
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
-    flex: 1,
-    marginRight: 10,
   },
   statusPillBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
     borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  paidStatusPill: {
-    backgroundColor: '#ECFDF5',
-  },
-  paidStatusText: {
-    color: '#059669',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  bakiStatusPill: {
-    backgroundColor: '#FFF1F2',
-  },
-  bakiStatusText: {
-    color: '#DC2626',
-    fontSize: 12,
-    fontWeight: '600',
+    borderWidth: 1,
   },
   invoiceRow3: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
     marginTop: 2,
   },
-  invDateText: {
-    fontSize: 12,
-    color: '#94A3B8',
-    fontWeight: '500',
-  },
 
-  // Empty State
-  emptyState: {
+  // Loading & Error States
+  centerLoadingState: {
+    paddingVertical: 40,
     alignItems: 'center',
-    paddingVertical: spacing.lg,
+    justifyContent: 'center',
   },
-  emptyText: {
-    marginVertical: spacing.xs,
-  },
-
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: borderRadius.xl,
-    borderTopRightRadius: borderRadius.xl,
+  errorCard: {
     padding: spacing.lg,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
     alignItems: 'center',
-    marginBottom: spacing.md,
+    justifyContent: 'center',
   },
+
+  // Modal Actions
   modalActionsRow: {
     flexDirection: 'row',
     gap: spacing.sm,

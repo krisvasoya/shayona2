@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText } from '@/src/components/common/AppText';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/theme';
 import { spacing } from '@/src/theme/spacing';
 import { borderRadius } from '@/src/theme/borderRadius';
 import { useAuth } from '@/src/features/auth';
@@ -27,13 +27,14 @@ const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.82, 320);
 
 export const AppDrawer: React.FC = () => {
   const router = useRouter();
+  const { t } = useLanguage();
+  const { colors, isDark } = useTheme();
   const { user, profile, signOut } = useAuth();
   const { isOpen, closeDrawer } = useDrawer();
-  const { t } = useLanguage();
   const isUpdateAvailable = useUpdateStore(state => state.isUpdateAvailable);
 
-  const animX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
-  const animOpacity = useRef(new Animated.Value(0)).current;
+  const [animX] = useState(new Animated.Value(-DRAWER_WIDTH));
+  const [animOpacity] = useState(new Animated.Value(0));
 
   useEffect(() => {
     if (isOpen) {
@@ -91,10 +92,11 @@ export const AppDrawer: React.FC = () => {
     Alert.alert(t.settings.confirmLogoutTitle, t.settings.confirmLogoutMessage, [
       { text: t.common.cancel, style: 'cancel' },
       {
-        text: t.nav.logout,
+        text: t.settings.signOut,
         style: 'destructive',
         onPress: async () => {
           await signOut();
+          router.replace('/(auth)/login');
         },
       },
     ]);
@@ -119,13 +121,18 @@ export const AppDrawer: React.FC = () => {
       </TouchableWithoutFeedback>
 
       {/* Drawer Content */}
-      <Animated.View style={[styles.drawerContainer, { transform: [{ translateX: animX }] }]}>
+      <Animated.View
+        style={[
+          styles.drawerContainer,
+          { backgroundColor: colors.surface, transform: [{ translateX: animX }] },
+        ]}
+      >
         <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, { backgroundColor: colors.surfaceSubtle }]}>
             <View style={styles.headerTop}>
-              <View style={styles.logoBadge}>
-                <Ionicons name="receipt" size={24} color={colors.surface} />
+              <View style={[styles.logoBadge, { backgroundColor: isDark ? colors.accent : colors.primary }]}>
+                <Ionicons name="receipt" size={24} color="#FFFFFF" />
               </View>
               <TouchableOpacity
                 onPress={closeDrawer}
@@ -138,7 +145,7 @@ export const AppDrawer: React.FC = () => {
             <AppText variant="h3" numberOfLines={1} style={{ marginTop: spacing.xs }}>
               {shopName}
             </AppText>
-            <AppText variant="captionBold" color={colors.primary}>
+            <AppText variant="captionBold" color={isDark ? colors.accentLight : colors.primary}>
               {t.nav.retailInvoice}
             </AppText>
             {displayPhone ? (
@@ -148,7 +155,7 @@ export const AppDrawer: React.FC = () => {
             ) : null}
           </View>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           {/* Primary Navigation */}
           <View style={styles.menuSection}>
@@ -267,7 +274,7 @@ export const AppDrawer: React.FC = () => {
 
           <View style={{ flex: 1 }} />
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           {/* Footer: Logout */}
           <View style={styles.footerSection}>
@@ -296,7 +303,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     zIndex: 998,
   },
   drawerContainer: {
@@ -305,7 +312,6 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: DRAWER_WIDTH,
-    backgroundColor: colors.surface,
     zIndex: 999,
     shadowColor: '#000',
     shadowOffset: { width: 4, height: 0 },
@@ -318,7 +324,6 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: spacing.md,
-    backgroundColor: colors.surfaceSubtle,
   },
   headerTop: {
     flexDirection: 'row',
@@ -330,7 +335,6 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -339,7 +343,6 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: colors.border,
   },
   menuSection: {
     paddingVertical: spacing.sm,
@@ -367,7 +370,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.danger,
+    backgroundColor: '#EF4444',
     marginLeft: 6,
   },
 });

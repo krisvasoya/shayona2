@@ -25,6 +25,8 @@ export const theme = {
 export type Theme = typeof theme;
 
 export * from './colors';
+export * from './themeStore';
+export * from './useTheme';
 export * from './typography';
 export * from './spacing';
 export * from './borderRadius';
