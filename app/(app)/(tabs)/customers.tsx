@@ -22,6 +22,7 @@ import {
   AppBadge,
 } from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/theme';
 import { spacing } from '@/src/theme/spacing';
 import { borderRadius } from '@/src/theme/borderRadius';
 import {
@@ -37,6 +38,7 @@ import { formatPhoneDisplay } from '@/src/utils/phone';
 export default function CustomersScreen() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { colors, isDark } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [displayLimit, setDisplayLimit] = useState(20);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -113,16 +115,27 @@ export default function CustomersScreen() {
         activeOpacity={0.7}
         onPress={() => router.push(`/(app)/customers/${item.id}` as any)}
       >
-        <AppCard style={styles.customerCard}>
+        <AppCard variant="elevated" style={styles.customerCard}>
           <View style={styles.cardHeader}>
-            <View style={styles.avatarCircle}>
-              <AppText variant="bodyLargeBold" color={colors.primary}>
+            <View
+              style={[
+                styles.avatarCircle,
+                {
+                  backgroundColor: isDark ? colors.surfaceElevated : colors.surfaceSubtle,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <AppText
+                variant="bodyLargeBold"
+                color={isDark ? colors.accent : colors.primary}
+              >
                 {item.name.slice(0, 2).toUpperCase()}
               </AppText>
             </View>
 
             <View style={styles.customerInfo}>
-              <AppText variant="bodyLargeBold" numberOfLines={1}>
+              <AppText variant="bodyLargeBold" color={colors.textPrimary} numberOfLines={1}>
                 {item.name}
               </AppText>
               <AppText variant="caption" color={colors.textSecondary} style={styles.phoneText}>
@@ -169,15 +182,17 @@ export default function CustomersScreen() {
       }
     >
       {/* Outstanding Stats Banner */}
-      <AppCard style={styles.summaryBanner}>
+      <AppCard variant="elevated" style={styles.summaryBanner}>
         <View style={styles.summaryCol}>
           <AppText variant="caption" color={colors.textSecondary}>
             {t.customers.title.toUpperCase()}
           </AppText>
-          <AppText variant="h3">{customers?.length || 0}</AppText>
+          <AppText variant="h3" color={colors.textPrimary}>
+            {customers?.length || 0}
+          </AppText>
         </View>
 
-        <View style={styles.summaryDivider} />
+        <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
 
         <View style={styles.summaryCol}>
           <AppText variant="caption" color={colors.textSecondary}>
@@ -189,28 +204,31 @@ export default function CustomersScreen() {
         </View>
       </AppCard>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons
-          name="search-outline"
-          size={20}
-          color={colors.textSecondary}
-          style={styles.searchIcon}
-        />
-        <AppTextInput
-          placeholder={t.customers.searchPlaceholder}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          containerStyle={styles.searchInputContainer}
-          style={styles.searchInput}
-          autoCapitalize="none"
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearchBtn}>
-            <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
-          </TouchableOpacity>
-        )}
-      </View>
+      {/* Search Bar with Native Icons */}
+      <AppTextInput
+        placeholder={t.customers.searchPlaceholder}
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        containerStyle={styles.searchContainer}
+        autoCapitalize="none"
+        leftIcon={
+          <Ionicons
+            name="search-outline"
+            size={20}
+            color={colors.textSecondary}
+          />
+        }
+        rightIcon={
+          searchQuery.length > 0 ? (
+            <TouchableOpacity
+              onPress={() => setSearchQuery('')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+          ) : undefined
+        }
+      />
 
       {/* Customer List / States */}
       {isLoading && !isRefetching ? (
@@ -233,17 +251,19 @@ export default function CustomersScreen() {
         </View>
       ) : customers && customers.length === 0 ? (
         <View style={styles.centerState}>
-          <Ionicons name="people-outline" size={56} color={colors.textMuted} />
-          <AppText variant="bodyLargeBold" style={styles.stateTitle}>
+          <Ionicons
+            name="people-outline"
+            size={56}
+            color={isDark ? colors.accent : colors.textMuted}
+          />
+          <AppText variant="bodyLargeBold" color={colors.textPrimary} style={styles.stateTitle}>
             {t.customers.noCustomers}
           </AppText>
-          {!searchQuery && (
-            <AppButton
-              title={t.customers.addCustomer}
-              onPress={() => setIsAddModalOpen(true)}
-              style={styles.retryBtn}
-            />
-          )}
+          <AppButton
+            title={`+ ${t.customers.addCustomer}`}
+            onPress={() => setIsAddModalOpen(true)}
+            style={styles.retryBtn}
+          />
         </View>
       ) : (
         <FlatList
@@ -282,9 +302,19 @@ export default function CustomersScreen() {
         }}
         statusBarTranslucent
       >
-        <SafeAreaView edges={['top', 'bottom']} style={styles.fullscreenModalContainer}>
-          <View style={styles.fullscreenModalHeader}>
-            <AppText variant="h3">{t.customers.createCustomerTitle}</AppText>
+        <SafeAreaView
+          edges={['top', 'bottom']}
+          style={[styles.fullscreenModalContainer, { backgroundColor: colors.background }]}
+        >
+          <View
+            style={[
+              styles.fullscreenModalHeader,
+              { backgroundColor: colors.surface, borderBottomColor: colors.border },
+            ]}
+          >
+            <AppText variant="h3" style={{ color: colors.textPrimary }}>
+              {t.customers.createCustomerTitle}
+            </AppText>
             <TouchableOpacity
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               onPress={() => {
@@ -364,7 +394,6 @@ const styles = StyleSheet.create({
   },
   summaryBanner: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
     padding: spacing.md,
     marginBottom: spacing.md,
     borderRadius: borderRadius.lg,
@@ -375,34 +404,10 @@ const styles = StyleSheet.create({
   },
   summaryDivider: {
     width: 1,
-    backgroundColor: colors.border,
     marginVertical: spacing.xs,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginBottom: spacing.md,
-    position: 'relative',
-  },
-  searchIcon: {
-    position: 'absolute',
-    left: spacing.sm,
-    zIndex: 1,
-  },
-  searchInputContainer: {
-    flex: 1,
-    marginBottom: 0,
-  },
-  searchInput: {
-    paddingLeft: spacing.xl,
-    paddingRight: spacing.xl,
-    backgroundColor: colors.surface,
-  },
-  clearSearchBtn: {
-    position: 'absolute',
-    right: spacing.sm,
-    zIndex: 1,
-    padding: 4,
   },
   listContent: {
     paddingBottom: 160,

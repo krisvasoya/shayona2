@@ -20,6 +20,7 @@ import {
   AppModal,
 } from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/theme';
 import { spacing } from '@/src/theme/spacing';
 import { borderRadius } from '@/src/theme/borderRadius';
 import {
@@ -45,6 +46,7 @@ interface LineItemState {
 export default function CreateInvoiceScreen() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { colors, isDark } = useTheme();
   const params = useLocalSearchParams<{
     id?: string;
     partyType?: PartyType;
@@ -299,7 +301,25 @@ export default function CreateInvoiceScreen() {
           </AppText>
           <View style={styles.toggleRow}>
             <TouchableOpacity
-              style={[styles.toggleBtn, partyType === 'CUSTOMER' && styles.toggleBtnActive]}
+              style={[
+                styles.toggleBtn,
+                {
+                  backgroundColor:
+                    partyType === 'CUSTOMER'
+                      ? isDark
+                        ? colors.accent
+                        : colors.primary
+                      : isDark
+                        ? colors.surfaceElevated
+                        : colors.surfaceSubtle,
+                  borderColor:
+                    partyType === 'CUSTOMER'
+                      ? isDark
+                        ? colors.accent
+                        : colors.primary
+                      : colors.border,
+                },
+              ]}
               onPress={() => {
                 if (partyType !== 'CUSTOMER') {
                   setPartyType('CUSTOMER');
@@ -310,14 +330,38 @@ export default function CreateInvoiceScreen() {
             >
               <AppText
                 variant="bodyBold"
-                color={partyType === 'CUSTOMER' ? colors.textInverse : colors.textSecondary}
+                color={
+                  partyType === 'CUSTOMER'
+                    ? '#FFFFFF'
+                    : isDark
+                      ? colors.textPrimary
+                      : colors.textSecondary
+                }
               >
                 {t.createInvoice.customer}
               </AppText>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.toggleBtn, partyType === 'BUYER' && styles.toggleBtnActive]}
+              style={[
+                styles.toggleBtn,
+                {
+                  backgroundColor:
+                    partyType === 'BUYER'
+                      ? isDark
+                        ? colors.accent
+                        : colors.primary
+                      : isDark
+                        ? colors.surfaceElevated
+                        : colors.surfaceSubtle,
+                  borderColor:
+                    partyType === 'BUYER'
+                      ? isDark
+                        ? colors.accent
+                        : colors.primary
+                      : colors.border,
+                },
+              ]}
               onPress={() => {
                 if (partyType !== 'BUYER') {
                   setPartyType('BUYER');
@@ -328,7 +372,13 @@ export default function CreateInvoiceScreen() {
             >
               <AppText
                 variant="bodyBold"
-                color={partyType === 'BUYER' ? colors.textInverse : colors.textSecondary}
+                color={
+                  partyType === 'BUYER'
+                    ? '#FFFFFF'
+                    : isDark
+                      ? colors.textPrimary
+                      : colors.textSecondary
+                }
               >
                 {t.createInvoice.buyer}
               </AppText>
@@ -339,7 +389,13 @@ export default function CreateInvoiceScreen() {
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => setIsPartyModalOpen(true)}
-            style={styles.partySelectBtn}
+            style={[
+              styles.partySelectBtn,
+              {
+                backgroundColor: isDark ? colors.surfaceInput : colors.surfaceSubtle,
+                borderColor: colors.border,
+              },
+            ]}
           >
             <View style={{ flex: 1 }}>
               <AppText variant="caption" color={colors.textSecondary}>
@@ -382,9 +438,18 @@ export default function CreateInvoiceScreen() {
             const itemTotal = itemQty * itemRate;
 
             return (
-              <View key={item.id} style={styles.itemBox}>
+              <View
+                key={item.id}
+                style={[
+                  styles.itemBox,
+                  {
+                    backgroundColor: isDark ? colors.surfaceElevated : colors.surfaceSubtle,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
                 <View style={styles.itemBoxHeader}>
-                  <AppText variant="bodyBold" color={colors.primary}>
+                  <AppText variant="bodyBold" color={isDark ? colors.accent : colors.primary}>
                     #{index + 1}
                   </AppText>
                   {items.length > 1 && (
@@ -444,7 +509,7 @@ export default function CreateInvoiceScreen() {
 
           <View style={styles.calcSummaryRow}>
             <AppText variant="bodyLargeBold">{t.createInvoice.totalBillAmount}</AppText>
-            <AppText variant="h2" color={colors.primary}>
+            <AppText variant="h2" color={isDark ? colors.accent : colors.primary}>
               {formatCurrency(Math.round(totalBillRupees * 100))}
             </AppText>
           </View>
@@ -476,7 +541,16 @@ export default function CreateInvoiceScreen() {
             />
           </View>
 
-          <View style={styles.bakiBanner}>
+          <View
+            style={[
+              styles.bakiBanner,
+              {
+                backgroundColor:
+                  remainingDueRupees > 0 ? colors.bakiBackground : colors.jamaBackground,
+                borderColor: remainingDueRupees > 0 ? colors.bakiBorder : colors.jamaBorder,
+              },
+            ]}
+          >
             <View>
               <AppText variant="caption" color={colors.textSecondary}>
                 {t.createInvoice.remainingBaki}

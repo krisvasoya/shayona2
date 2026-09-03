@@ -20,6 +20,8 @@ describe('Global Theme System', () => {
       'accent',
       'accentLight',
       'accentSubtle',
+      'primaryAccentPressed',
+      'primaryAccentSoft',
       'jama',
       'jamaLight',
       'jamaBackground',
@@ -28,6 +30,8 @@ describe('Global Theme System', () => {
       'bakiLight',
       'bakiBackground',
       'bakiBorder',
+      'expense',
+      'expenseBackground',
       'success',
       'successBackground',
       'warning',
@@ -39,8 +43,11 @@ describe('Global Theme System', () => {
       'background',
       'surface',
       'surfaceSubtle',
+      'surfaceElevated',
+      'surfaceInput',
       'textPrimary',
       'textSecondary',
+      'textTertiary',
       'textMuted',
       'textInverse',
       'textLink',
@@ -48,6 +55,9 @@ describe('Global Theme System', () => {
       'borderDark',
       'borderLight',
       'divider',
+      'disabled',
+      'disabledText',
+      'white',
       'overlay',
       'backdrop',
     ];
@@ -69,11 +79,11 @@ describe('Global Theme System', () => {
     });
 
     it('dark mode financial semantics (Jama & Baki) have high-contrast accessible tokens', () => {
-      expect(darkColors.jama).toBe('#10B981');
-      expect(darkColors.baki).toBe('#F87171');
-      expect(darkColors.background).toBe('#0F172A');
-      expect(darkColors.surface).toBe('#1E293B');
-      expect(darkColors.textPrimary).toBe('#F8FAFC');
+      expect(darkColors.jama).toBe('#35D08A');
+      expect(darkColors.baki).toBe('#FF626B');
+      expect(darkColors.background).toBe('#0B1220');
+      expect(darkColors.surface).toBe('#151F33');
+      expect(darkColors.textPrimary).toBe('#F5F7FB');
     });
   });
 

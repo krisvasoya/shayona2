@@ -19,6 +19,7 @@ import {
   AppBadge,
 } from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/theme';
 import { spacing } from '@/src/theme/spacing';
 import { borderRadius } from '@/src/theme/borderRadius';
 import { useInvoices, InvoiceSummary } from '@/src/features/invoices';
@@ -33,6 +34,7 @@ const PAGE_CHUNK_SIZE = 20;
 export default function InvoicesScreen() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { colors, isDark } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<FilterTab>('ALL');
   const [displayLimit, setDisplayLimit] = useState(PAGE_CHUNK_SIZE);
@@ -84,11 +86,13 @@ export default function InvoicesScreen() {
         activeOpacity={0.7}
         onPress={() => router.push(`/(app)/invoices/${item.id}` as any)}
       >
-        <AppCard style={styles.invoiceCard}>
+        <AppCard variant="elevated" style={styles.invoiceCard}>
           {/* Card Header: Invoice # & Date */}
           <View style={styles.cardHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <AppText variant="bodyLargeBold">#{item.invoice_number}</AppText>
+              <AppText variant="bodyLargeBold" color={colors.textPrimary}>
+                #{item.invoice_number}
+              </AppText>
               <AppBadge
                 label={
                   item.party_type === 'CUSTOMER' ? t.invoices.customerBill : t.invoices.buyerBill
@@ -114,7 +118,12 @@ export default function InvoicesScreen() {
               color={colors.textSecondary}
               style={{ marginRight: 6 }}
             />
-            <AppText variant="bodyLargeBold" numberOfLines={1} style={{ flex: 1 }}>
+            <AppText
+              variant="bodyLargeBold"
+              color={colors.textPrimary}
+              numberOfLines={1}
+              style={{ flex: 1 }}
+            >
               {item.party_name}
             </AppText>
           </View>
@@ -130,7 +139,7 @@ export default function InvoicesScreen() {
           </AppText>
 
           {/* Divider */}
-          <View style={styles.cardDivider} />
+          <View style={[styles.cardDivider, { backgroundColor: colors.border }]} />
 
           {/* Card Footer: Financial Summary */}
           <View style={styles.cardFooter}>
@@ -138,7 +147,9 @@ export default function InvoicesScreen() {
               <AppText variant="caption" color={colors.textSecondary}>
                 {t.invoices.totalAmount}
               </AppText>
-              <AppText variant="bodyLargeBold">{formatCurrency(Number(item.total_amount))}</AppText>
+              <AppText variant="bodyLargeBold" color={colors.textPrimary}>
+                {formatCurrency(Number(item.total_amount))}
+              </AppText>
             </View>
 
             <View style={{ alignItems: 'flex-end' }}>
@@ -184,26 +195,28 @@ export default function InvoicesScreen() {
       }
     >
       {/* High-Level Ledger Summary Bar */}
-      <AppCard style={styles.summaryBanner}>
+      <AppCard variant="elevated" style={styles.summaryBanner}>
         <View style={styles.summaryCol}>
           <AppText variant="caption" color={colors.textSecondary}>
             {t.invoices.title.toUpperCase()}
           </AppText>
-          <AppText variant="h3">{invoices?.length || 0}</AppText>
+          <AppText variant="h3" color={colors.textPrimary}>
+            {invoices?.length || 0}
+          </AppText>
         </View>
 
-        <View style={styles.summaryDivider} />
+        <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
 
         <View style={styles.summaryCol}>
           <AppText variant="caption" color={colors.textSecondary}>
             {t.invoices.totalAmount.toUpperCase()}
           </AppText>
-          <AppText variant="h3" color={colors.primary}>
+          <AppText variant="h3" color={isDark ? colors.accent : colors.primary}>
             {formatCurrency(totalBilledPaise)}
           </AppText>
         </View>
 
-        <View style={styles.summaryDivider} />
+        <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
 
         <View style={styles.summaryCol}>
           <AppText variant="caption" color={colors.textSecondary}>
@@ -215,38 +228,55 @@ export default function InvoicesScreen() {
         </View>
       </AppCard>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons
-          name="search-outline"
-          size={20}
-          color={colors.textSecondary}
-          style={styles.searchIcon}
-        />
-        <AppTextInput
-          placeholder={t.invoices.searchPlaceholder}
-          value={searchQuery}
-          onChangeText={text => {
-            setSearchQuery(text);
-            setDisplayLimit(PAGE_CHUNK_SIZE);
-          }}
-          containerStyle={styles.searchInputContainer}
-          style={styles.searchInput}
-          autoCapitalize="none"
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearchBtn}>
-            <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
-          </TouchableOpacity>
-        )}
-      </View>
+      {/* Search Bar with Native Icons */}
+      <AppTextInput
+        placeholder={t.invoices.searchPlaceholder}
+        value={searchQuery}
+        onChangeText={text => {
+          setSearchQuery(text);
+          setDisplayLimit(PAGE_CHUNK_SIZE);
+        }}
+        containerStyle={styles.searchContainer}
+        autoCapitalize="none"
+        leftIcon={
+          <Ionicons
+            name="search-outline"
+            size={20}
+            color={colors.textSecondary}
+          />
+        }
+        rightIcon={
+          searchQuery.length > 0 ? (
+            <TouchableOpacity
+              onPress={() => setSearchQuery('')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+          ) : undefined
+        }
+      />
 
       {/* Filter Tabs */}
       <View style={styles.filterTabsRow}>
         {(['ALL', 'CUSTOMERS', 'BUYERS', 'BAKI', 'PAID'] as FilterTab[]).map(tab => (
           <TouchableOpacity
             key={tab}
-            style={[styles.filterChip, activeTab === tab && styles.filterChipActive]}
+            style={[
+              styles.filterChip,
+              {
+                backgroundColor:
+                  activeTab === tab
+                    ? isDark
+                      ? colors.accent
+                      : colors.primary
+                    : isDark
+                      ? colors.surfaceElevated
+                      : colors.surfaceSubtle,
+                borderColor:
+                  activeTab === tab ? (isDark ? colors.accent : colors.primary) : colors.border,
+              },
+            ]}
             onPress={() => {
               setActiveTab(tab);
               setDisplayLimit(PAGE_CHUNK_SIZE);
@@ -254,7 +284,9 @@ export default function InvoicesScreen() {
           >
             <AppText
               variant="captionBold"
-              color={activeTab === tab ? colors.textInverse : colors.textSecondary}
+              color={
+                activeTab === tab ? '#FFFFFF' : isDark ? colors.textPrimary : colors.textSecondary
+              }
             >
               {tab === 'ALL'
                 ? t.invoices.filterAll
@@ -336,7 +368,6 @@ const styles = StyleSheet.create({
   },
   summaryBanner: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
     padding: spacing.md,
     marginBottom: spacing.md,
     borderRadius: borderRadius.lg,
@@ -347,33 +378,10 @@ const styles = StyleSheet.create({
   },
   summaryDivider: {
     width: 1,
-    backgroundColor: colors.border,
     marginVertical: spacing.xs,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-    position: 'relative',
-  },
-  searchIcon: {
-    position: 'absolute',
-    left: spacing.sm,
-    zIndex: 1,
-  },
-  searchInputContainer: {
-    flex: 1,
-    marginBottom: 0,
-  },
-  searchInput: {
-    paddingLeft: spacing.xl,
-    paddingRight: spacing.xl,
-    backgroundColor: colors.surface,
-  },
-  clearSearchBtn: {
-    position: 'absolute',
-    right: spacing.sm,
-    zIndex: 1,
+    marginBottom: spacing.md,
   },
   filterTabsRow: {
     flexDirection: 'row',

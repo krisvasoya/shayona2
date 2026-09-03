@@ -86,7 +86,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         ) : null}
 
         <View style={styles.titleContainer}>
-          <AppText variant="h3" numberOfLines={1}>
+          <AppText variant="h3" numberOfLines={1} style={{ color: colors.textPrimary }}>
             {title}
           </AppText>
           {subtitle ? (

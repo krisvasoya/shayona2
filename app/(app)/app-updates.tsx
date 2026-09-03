@@ -10,6 +10,7 @@ import {
   AppButton,
 } from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/theme';
 import { spacing } from '@/src/theme/spacing';
 import { borderRadius } from '@/src/theme/borderRadius';
 import { useLanguage } from '@/src/localization';
@@ -18,6 +19,7 @@ import { useNetworkStore } from '@/src/services/network.service';
 
 export default function AppUpdatesScreen() {
   const { t } = useLanguage();
+  const { colors, isDark } = useTheme();
   const isOnline = useNetworkStore(state => state.isOnline);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
 
@@ -89,8 +91,16 @@ export default function AppUpdatesScreen() {
       {/* Main Version Status Card */}
       <AppCard style={styles.card}>
         <View style={styles.headerRow}>
-          <View style={styles.appIconContainer}>
-            <Ionicons name="sparkles" size={26} color={colors.primary} />
+          <View
+            style={[
+              styles.appIconContainer,
+              {
+                backgroundColor: isDark ? colors.surfaceElevated : colors.surfaceSubtle,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <Ionicons name="sparkles" size={26} color={isDark ? colors.accent : colors.primary} />
           </View>
           <View style={styles.headerDetails}>
             <AppText variant="h3">Shayona Invoice</AppText>
@@ -108,13 +118,21 @@ export default function AppUpdatesScreen() {
           )}
         </View>
 
-        <View style={styles.statusDivider} />
+        <View style={[styles.statusDivider, { backgroundColor: colors.border }]} />
 
         {/* State Information */}
-        <View style={styles.statusBox}>
+        <View
+          style={[
+            styles.statusBox,
+            {
+              backgroundColor: isDark ? colors.surfaceElevated : colors.surfaceSubtle,
+              borderColor: colors.border,
+            },
+          ]}
+        >
           {isChecking ? (
             <View style={styles.statusRow}>
-              <ActivityIndicator size="small" color={colors.primary} />
+              <ActivityIndicator size="small" color={isDark ? colors.accent : colors.primary} />
               <AppText variant="bodyMedium" style={{ marginLeft: spacing.sm }}>
                 {t.updates.checking}
               </AppText>

@@ -11,6 +11,8 @@ export interface ThemeColors {
   accent: string;
   accentLight: string;
   accentSubtle: string;
+  primaryAccentPressed: string;
+  primaryAccentSoft: string;
 
   // Financial Semantics
   // Jama / Received Amount (Green)
@@ -25,6 +27,10 @@ export interface ThemeColors {
   bakiBackground: string;
   bakiBorder: string;
 
+  // Expense / Warning (Amber/Gold)
+  expense: string;
+  expenseBackground: string;
+
   // Status Colors
   success: string;
   successBackground: string;
@@ -35,14 +41,17 @@ export interface ThemeColors {
   danger: string;
   dangerBackground: string;
 
-  // Neutrals & Backgrounds
+  // Neutrals & Surfaces
   background: string;
   surface: string;
   surfaceSubtle: string;
+  surfaceElevated: string;
+  surfaceInput: string;
 
   // Text Colors
   textPrimary: string;
   textSecondary: string;
+  textTertiary: string;
   textMuted: string;
   textInverse: string;
   textLink: string;
@@ -52,6 +61,11 @@ export interface ThemeColors {
   borderDark: string;
   borderLight: string;
   divider: string;
+
+  // Controls & Disabled
+  disabled: string;
+  disabledText: string;
+  white: string;
 
   // Special UI
   overlay: string;
@@ -66,6 +80,8 @@ export const lightColors: ThemeColors = {
   accent: '#2563EB', // Royal Blue
   accentLight: '#3B82F6',
   accentSubtle: '#EFF6FF',
+  primaryAccentPressed: '#1D4ED8',
+  primaryAccentSoft: '#EFF6FF',
 
   // Financial Semantics
   jama: '#059669', // Emerald 600
@@ -77,6 +93,10 @@ export const lightColors: ThemeColors = {
   bakiLight: '#EF4444',
   bakiBackground: '#FEF2F2', // Red 50
   bakiBorder: '#FECACA', // Red 200
+
+  // Expense
+  expense: '#D97706', // Amber 600
+  expenseBackground: '#FFFBEB', // Amber 50
 
   // Status Colors
   success: '#16A34A',
@@ -92,10 +112,13 @@ export const lightColors: ThemeColors = {
   background: '#F8FAFC', // Slate 50
   surface: '#FFFFFF', // Clean White Card / Modal
   surfaceSubtle: '#F1F5F9', // Slate 100
+  surfaceElevated: '#FFFFFF',
+  surfaceInput: '#FFFFFF',
 
   // Text Colors
   textPrimary: '#0F172A', // Slate 900
   textSecondary: '#475569', // Slate 600
+  textTertiary: '#94A3B8', // Slate 400
   textMuted: '#94A3B8', // Slate 400
   textInverse: '#FFFFFF',
   textLink: '#2563EB',
@@ -106,6 +129,11 @@ export const lightColors: ThemeColors = {
   borderLight: '#F1F5F9', // Slate 100
   divider: '#E2E8F0',
 
+  // Controls & Disabled
+  disabled: '#CBD5E1',
+  disabledText: '#94A3B8',
+  white: '#FFFFFF',
+
   // Special UI
   overlay: 'rgba(15, 23, 42, 0.5)',
   backdrop: 'rgba(0, 0, 0, 0.4)',
@@ -113,54 +141,70 @@ export const lightColors: ThemeColors = {
 
 export const darkColors: ThemeColors = {
   // Brand & Primary
-  primary: '#38BDF8', // Sky 400 (Readable brand in dark mode)
-  primaryLight: '#0284C7',
-  primaryDark: '#0369A1',
-  accent: '#3B82F6', // Blue 500
-  accentLight: '#60A5FA',
-  accentSubtle: '#1E293B',
+  primary: '#4F8CFF', // PRIMARY ACCENT
+  primaryLight: '#54B8FF',
+  primaryDark: '#3D73D9', // PRIMARY ACCENT PRESSED
+  accent: '#4F8CFF', // PRIMARY ACCENT
+  accentLight: '#54B8FF',
+  accentSubtle: '#1E3A68', // PRIMARY ACCENT SOFT
+  primaryAccentPressed: '#3D73D9',
+  primaryAccentSoft: '#1E3A68',
 
   // Financial Semantics
-  jama: '#10B981', // Emerald 500
-  jamaLight: '#34D399',
-  jamaBackground: '#064E3B33', // Deep Emerald tint
-  jamaBorder: '#065F46',
+  // Jama / Received Amount (Green)
+  jama: '#35D08A', // SUCCESS / JAMA
+  jamaLight: '#4EE39D',
+  jamaBackground: '#123D30', // SUCCESS SOFT
+  jamaBorder: '#35D08A',
 
-  baki: '#F87171', // Red 400
-  bakiLight: '#EF4444',
-  bakiBackground: '#7F1D1D33', // Deep Red tint
-  bakiBorder: '#991B1B',
+  // Baki / Outstanding / Due Amount (Red)
+  baki: '#FF626B', // DANGER / BAKI
+  bakiLight: '#FF858C',
+  bakiBackground: '#4A2027', // DANGER SOFT
+  bakiBorder: '#FF626B',
+
+  // Expense / Warning (Amber/Gold)
+  expense: '#F3B94B', // EXPENSE / WARNING
+  expenseBackground: '#493718', // EXPENSE SOFT
 
   // Status Colors
-  success: '#10B981',
-  successBackground: '#064E3B33',
-  warning: '#FBBF24',
-  warningBackground: '#78350F33',
-  info: '#38BDF8',
-  infoBackground: '#0C4A6E33',
-  danger: '#F87171',
-  dangerBackground: '#7F1D1D33',
+  success: '#35D08A',
+  successBackground: '#123D30',
+  warning: '#F3B94B',
+  warningBackground: '#493718',
+  info: '#54B8FF',
+  infoBackground: '#1E3A68',
+  danger: '#FF626B',
+  dangerBackground: '#4A2027',
 
-  // Neutrals & Backgrounds
-  background: '#0F172A', // Slate 900
-  surface: '#1E293B', // Slate 800 (Card / Modal Surface)
-  surfaceSubtle: '#334155', // Slate 700
+  // Neutrals & Surfaces (Depth Hierarchy)
+  background: '#0B1220', // BACKGROUND
+  surface: '#151F33', // PRIMARY SURFACE (Cards / Headers / Modals)
+  surfaceSubtle: '#1C2940', // ELEVATED SURFACE
+  surfaceElevated: '#1C2940', // ELEVATED SURFACE
+  surfaceInput: '#202D44', // INPUT / CONTROL SURFACE
 
   // Text Colors
-  textPrimary: '#F8FAFC', // Slate 50
-  textSecondary: '#94A3B8', // Slate 400
-  textMuted: '#64748B', // Slate 500
-  textInverse: '#0F172A',
-  textLink: '#60A5FA',
+  textPrimary: '#F5F7FB', // PRIMARY TEXT
+  textSecondary: '#AEB9CA', // SECONDARY TEXT
+  textTertiary: '#7F8CA1', // TERTIARY TEXT
+  textMuted: '#7F8CA1', // Hints / Placeholder
+  textInverse: '#0B1220',
+  textLink: '#4F8CFF',
 
   // Borders & Dividers
-  border: '#334155', // Slate 700
-  borderDark: '#475569', // Slate 600
-  borderLight: '#1E293B',
-  divider: '#334155',
+  border: '#33435C', // BORDER
+  borderDark: '#415574',
+  borderLight: '#202D44',
+  divider: '#33435C',
+
+  // Controls & Disabled
+  disabled: '#566276', // DISABLED
+  disabledText: '#737F92', // DISABLED TEXT
+  white: '#FFFFFF',
 
   // Special UI
-  overlay: 'rgba(0, 0, 0, 0.75)',
+  overlay: 'rgba(11, 18, 32, 0.75)',
   backdrop: 'rgba(0, 0, 0, 0.65)',
 };
 

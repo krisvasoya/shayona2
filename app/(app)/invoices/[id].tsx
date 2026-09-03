@@ -19,6 +19,7 @@ import {
   AppModal,
 } from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/theme';
 import { spacing } from '@/src/theme/spacing';
 import { borderRadius } from '@/src/theme/borderRadius';
 import { useAuthStore } from '@/src/store/authStore';
@@ -34,6 +35,7 @@ export default function InvoiceDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { t, language } = useLanguage();
+  const { colors, isDark } = useTheme();
 
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -267,12 +269,31 @@ export default function InvoiceDetailScreen() {
                 params: { id: invoice.id },
               })
             }
-            style={styles.actionIconBtn}
+            style={[
+              styles.actionIconBtn,
+              {
+                backgroundColor: isDark ? colors.surfaceElevated : colors.surfaceSubtle,
+                borderColor: colors.border,
+              },
+            ]}
           >
-            <Ionicons name="create-outline" size={22} color={colors.primary} />
+            <Ionicons
+              name="create-outline"
+              size={22}
+              color={isDark ? colors.accent : colors.primary}
+            />
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleDeleteInvoice} style={styles.actionIconBtn}>
+          <TouchableOpacity
+            onPress={handleDeleteInvoice}
+            style={[
+              styles.actionIconBtn,
+              {
+                backgroundColor: isDark ? colors.dangerBackground : colors.surfaceSubtle,
+                borderColor: isDark ? colors.danger : colors.border,
+              },
+            ]}
+          >
             <Ionicons name="trash-outline" size={22} color={colors.danger} />
           </TouchableOpacity>
         </View>
@@ -370,7 +391,14 @@ export default function InvoiceDetailScreen() {
             <TouchableOpacity
               activeOpacity={0.7}
               disabled={generatingPdf || printing}
-              style={[styles.actionBtn, styles.printBtn]}
+              style={[
+                styles.actionBtn,
+                styles.printBtn,
+                {
+                  backgroundColor: isDark ? colors.surfaceElevated : colors.surfaceSubtle,
+                  borderColor: colors.border,
+                },
+              ]}
               onPress={handlePrintInvoice}
             >
               <Ionicons name="print-outline" size={18} color={colors.textPrimary} />
@@ -450,7 +478,7 @@ export default function InvoiceDetailScreen() {
             </AppText>
           </View>
 
-          <View style={styles.calcDivider} />
+          <View style={[styles.calcDivider, { backgroundColor: colors.border }]} />
 
           <View style={styles.calcRow}>
             <AppText
@@ -484,7 +512,15 @@ export default function InvoiceDetailScreen() {
               style={{ marginTop: spacing.md }}
             />
           ) : (
-            <View style={styles.fullyPaidBadgeContainer}>
+            <View
+              style={[
+                styles.fullyPaidBadgeContainer,
+                {
+                  backgroundColor: isDark ? colors.jamaBackground : colors.successBackground,
+                  borderColor: colors.jamaBorder,
+                },
+              ]}
+            >
               <Ionicons name="checkmark-circle" size={18} color={colors.jama} />
               <AppText variant="captionBold" color={colors.jama} style={{ marginLeft: 6 }}>
                 {t.invoices.alreadyFullyPaid || 'This invoice is already fully paid.'}
@@ -500,7 +536,7 @@ export default function InvoiceDetailScreen() {
               <Ionicons
                 name="time-outline"
                 size={20}
-                color={colors.primary}
+                color={isDark ? colors.accent : colors.primary}
                 style={{ marginRight: 6 }}
               />
               <AppText variant="bodyLargeBold">
@@ -526,7 +562,10 @@ export default function InvoiceDetailScreen() {
                 key={p.id}
                 style={[
                   styles.historyRow,
-                  idx < paymentHistory.length - 1 && styles.historyRowBorder,
+                  idx < paymentHistory.length - 1 && [
+                    styles.historyRowBorder,
+                    { borderBottomColor: colors.border },
+                  ],
                 ]}
               >
                 <View style={{ flex: 1, paddingRight: spacing.sm }}>
@@ -551,7 +590,15 @@ export default function InvoiceDetailScreen() {
                   <AppText variant="bodyLargeBold" color={colors.jama}>
                     +{formatCurrency(Number(p.amount))}
                   </AppText>
-                  <View style={styles.receivedPill}>
+                  <View
+                    style={[
+                      styles.receivedPill,
+                      {
+                        backgroundColor: isDark ? colors.jamaBackground : '#ECFDF5',
+                        borderColor: colors.jamaBorder,
+                      },
+                    ]}
+                  >
                     <AppText variant="caption" color={colors.jama}>
                       ✓ {t.invoices.paymentReceived || 'Received'}
                     </AppText>

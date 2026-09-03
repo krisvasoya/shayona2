@@ -21,7 +21,7 @@ import {
   AppModal,
 } from '@/src/components/common';
 import { useDrawer } from '@/src/components/navigation/DrawerContext';
-import { colors } from '@/src/theme/colors';
+import { colors, useTheme } from '@/src/theme';
 import { spacing } from '@/src/theme/spacing';
 import { borderRadius } from '@/src/theme/borderRadius';
 import { formatCurrency, paiseToRupees } from '@/src/utils';
@@ -39,6 +39,7 @@ import { ExpenseSummary } from '@/src/types/expense';
 export default function ExpensesScreen() {
   const { openDrawer } = useDrawer();
   const { t } = useLanguage();
+  const { colors, isDark } = useTheme();
 
   // Date Filter State
   const [activeFilter, setActiveFilter] = useState<DateFilter>('THIS_MONTH');
@@ -221,7 +222,7 @@ export default function ExpensesScreen() {
             style={styles.hamburgerBtn}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <Ionicons name="menu-outline" size={26} color="#1E293B" />
+            <Ionicons name="menu-outline" size={26} color={colors.textPrimary} />
           </TouchableOpacity>
           <View>
             <AppText variant="h2">{t.expenses.title}</AppText>
@@ -254,7 +255,15 @@ export default function ExpensesScreen() {
                 activeOpacity={0.7}
                 style={[
                   styles.filterPill,
-                  isActive ? styles.filterPillActive : styles.filterPillInactive,
+                  isActive
+                    ? [styles.filterPillActive, isDark && { backgroundColor: colors.accent }]
+                    : [
+                        styles.filterPillInactive,
+                        isDark && {
+                          backgroundColor: colors.surfaceElevated,
+                          borderColor: colors.border,
+                        },
+                      ],
                 ]}
                 onPress={() => {
                   if (btn.value === 'CUSTOM') {
@@ -267,7 +276,11 @@ export default function ExpensesScreen() {
                 }}
               >
                 <AppText
-                  style={isActive ? styles.filterPillTextActive : styles.filterPillTextInactive}
+                  style={
+                    isActive
+                      ? styles.filterPillTextActive
+                      : [styles.filterPillTextInactive, isDark && { color: colors.textPrimary }]
+                  }
                 >
                   {btn.label}
                 </AppText>
@@ -279,26 +292,49 @@ export default function ExpensesScreen() {
 
       {/* 3. Active Period Display */}
       <View style={styles.periodRow}>
-        <Ionicons name="calendar-outline" size={15} color="#64748B" />
-        <AppText variant="caption" style={styles.periodText}>
+        <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
+        <AppText variant="caption" style={[styles.periodText, { color: colors.textSecondary }]}>
           {t.dashboard.period}: {currentRange.startDate} to {currentRange.endDate}
         </AppText>
       </View>
 
       {/* 4. Total Expenses Summary Banner */}
-      <View style={styles.summaryBanner}>
+      <View
+        style={[
+          styles.summaryBanner,
+          {
+            backgroundColor: isDark ? colors.expenseBackground : '#FFFBEB',
+            borderColor: isDark ? colors.expense : '#FDE68A',
+          },
+        ]}
+      >
         <View style={styles.summaryContent}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Ionicons name="wallet-outline" size={20} color="#B45309" />
-            <AppText variant="captionBold" style={styles.summaryLabel}>
+            <Ionicons name="wallet-outline" size={20} color={isDark ? colors.expense : '#B45309'} />
+            <AppText
+              variant="captionBold"
+              style={[styles.summaryLabel, { color: isDark ? colors.expense : '#B45309' }]}
+            >
               {t.expenses.totalExpenses}
             </AppText>
           </View>
-          <AppText variant="h1" style={styles.summaryAmount}>
+          <AppText
+            variant="h1"
+            style={[styles.summaryAmount, { color: isDark ? colors.expense : '#B45309' }]}
+          >
             {formatCurrency(totalPeriodPaise)}
           </AppText>
         </View>
-        <AppText variant="caption" style={styles.periodCountText}>
+        <AppText
+          variant="caption"
+          style={[
+            styles.periodCountText,
+            {
+              backgroundColor: isDark ? 'rgba(243, 185, 75, 0.2)' : '#FEF3C7',
+              color: isDark ? colors.expense : '#92400E',
+            },
+          ]}
+        >
           {(expenses || []).length} {t.expenses.title.toLowerCase()}
         </AppText>
       </View>
@@ -354,8 +390,11 @@ export default function ExpensesScreen() {
                 {/* Date & Icon */}
                 <View style={styles.expenseInfo}>
                   <View style={styles.calendarTag}>
-                    <Ionicons name="calendar-outline" size={14} color="#64748B" />
-                    <AppText variant="bodyBold" style={{ marginLeft: 6 }}>
+                    <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
+                    <AppText
+                      variant="bodyBold"
+                      style={{ marginLeft: 6, color: colors.textPrimary }}
+                    >
                       {item.expense_date}
                     </AppText>
                   </View>
@@ -363,22 +402,44 @@ export default function ExpensesScreen() {
 
                 {/* Amount */}
                 <View style={styles.amountActionWrap}>
-                  <AppText variant="h3" style={styles.expenseItemAmount}>
+                  <AppText
+                    variant="h3"
+                    style={[
+                      styles.expenseItemAmount,
+                      { color: isDark ? colors.expense : colors.textPrimary },
+                    ]}
+                  >
                     {formatCurrency(item.amount)}
                   </AppText>
 
                   {/* Actions: Edit / Delete */}
                   <View style={styles.cardActionButtons}>
                     <TouchableOpacity
-                      style={styles.iconBtn}
+                      style={[
+                        styles.iconBtn,
+                        {
+                          backgroundColor: isDark ? colors.surfaceElevated : colors.surfaceSubtle,
+                          borderColor: isDark ? colors.border : colors.borderLight,
+                        },
+                      ]}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       onPress={() => openEditModal(item)}
                     >
-                      <Ionicons name="pencil-outline" size={18} color={colors.primary} />
+                      <Ionicons
+                        name="pencil-outline"
+                        size={18}
+                        color={isDark ? colors.textPrimary : colors.primary}
+                      />
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={styles.iconBtn}
+                      style={[
+                        styles.iconBtn,
+                        {
+                          backgroundColor: isDark ? colors.dangerBackground : colors.surfaceSubtle,
+                          borderColor: isDark ? colors.danger : colors.borderLight,
+                        },
+                      ]}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       onPress={() => handleDeleteExpense(item.id)}
                     >
@@ -402,9 +463,19 @@ export default function ExpensesScreen() {
         }}
         statusBarTranslucent
       >
-        <SafeAreaView edges={['top', 'bottom']} style={styles.fullscreenModalContainer}>
-          <View style={styles.fullscreenModalHeader}>
-            <AppText variant="h3">{t.expenses.createExpenseTitle}</AppText>
+        <SafeAreaView
+          edges={['top', 'bottom']}
+          style={[styles.fullscreenModalContainer, { backgroundColor: colors.background }]}
+        >
+          <View
+            style={[
+              styles.fullscreenModalHeader,
+              { backgroundColor: colors.surface, borderBottomColor: colors.border },
+            ]}
+          >
+            <AppText variant="h3" style={{ color: colors.textPrimary }}>
+              {t.expenses.createExpenseTitle}
+            </AppText>
             <TouchableOpacity
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               onPress={() => {
@@ -473,9 +544,19 @@ export default function ExpensesScreen() {
         }}
         statusBarTranslucent
       >
-        <SafeAreaView edges={['top', 'bottom']} style={styles.fullscreenModalContainer}>
-          <View style={styles.fullscreenModalHeader}>
-            <AppText variant="h3">{t.expenses.editExpenseTitle}</AppText>
+        <SafeAreaView
+          edges={['top', 'bottom']}
+          style={[styles.fullscreenModalContainer, { backgroundColor: colors.background }]}
+        >
+          <View
+            style={[
+              styles.fullscreenModalHeader,
+              { backgroundColor: colors.surface, borderBottomColor: colors.border },
+            ]}
+          >
+            <AppText variant="h3" style={{ color: colors.textPrimary }}>
+              {t.expenses.editExpenseTitle}
+            </AppText>
             <TouchableOpacity
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               onPress={() => {

@@ -33,24 +33,29 @@ export const AppTextInput: React.FC<AppTextInputProps> = ({
   rightIcon,
   containerStyle,
   inputStyle,
+  style,
   disabled = false,
   onFocus,
   onBlur,
   ...rest
 }) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
 
   const wrapperStyle: ViewStyle = {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: disabled ? colors.surfaceSubtle : colors.surface,
+    backgroundColor: disabled
+      ? isDark
+        ? colors.disabled
+        : colors.surfaceSubtle
+      : isDark
+        ? isFocused
+          ? colors.surfaceElevated
+          : colors.surfaceInput
+        : colors.surface,
     borderWidth: 1.5,
-    borderColor: error
-      ? colors.danger
-      : isFocused
-        ? colors.accent
-        : colors.border,
+    borderColor: error ? colors.danger : isFocused ? colors.accent : colors.border,
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
     minHeight: 48,
@@ -60,24 +65,21 @@ export const AppTextInput: React.FC<AppTextInputProps> = ({
   return (
     <View style={[styles.container, containerStyle]}>
       {label ? (
-        <AppText
-          style={[
-            styles.label,
-            { color: colors.textSecondary },
-          ]}
-        >
-          {label}
-        </AppText>
+        <AppText style={[styles.label, { color: colors.textSecondary }]}>{label}</AppText>
       ) : null}
       <View style={wrapperStyle}>
         {leftIcon ? <View style={{ marginRight: 8 }}>{leftIcon}</View> : null}
         <TextInput
           editable={!disabled}
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={isDark ? colors.textSecondary : colors.textMuted}
+          cursorColor={isDark ? colors.accent : colors.primary}
+          selectionColor={isDark ? 'rgba(79, 140, 255, 0.35)' : undefined}
           style={[
             styles.input,
-            { color: colors.textPrimary },
+            { color: colors.textPrimary, backgroundColor: 'transparent' },
             inputStyle,
+            style,
+            { backgroundColor: 'transparent' },
           ]}
           onFocus={e => {
             setIsFocused(true);

@@ -174,10 +174,7 @@ export default function DashboardScreen() {
 
         <TouchableOpacity
           activeOpacity={0.8}
-          style={[
-            styles.newBillBtn,
-            { backgroundColor: isDark ? colors.accent : colors.primary },
-          ]}
+          style={[styles.newBillBtn, { backgroundColor: isDark ? colors.accent : colors.primary }]}
           onPress={() => router.push('/(app)/invoices/create')}
         >
           <Ionicons name="add" size={18} color="#FFFFFF" style={{ marginRight: 2 }} />
@@ -222,7 +219,9 @@ export default function DashboardScreen() {
                       ? isDark
                         ? colors.accent
                         : colors.primary
-                      : colors.surface,
+                      : isDark
+                        ? colors.surfaceElevated
+                        : colors.surface,
                     borderColor: isActive ? 'transparent' : colors.border,
                   },
                 ]}
@@ -230,7 +229,11 @@ export default function DashboardScreen() {
                 <AppText
                   variant="captionBold"
                   style={{
-                    color: isActive ? '#FFFFFF' : colors.textSecondary,
+                    color: isActive
+                      ? '#FFFFFF'
+                      : isDark
+                        ? colors.textPrimary
+                        : colors.textSecondary,
                     fontWeight: isActive ? '700' : '500',
                   }}
                 >
@@ -288,7 +291,7 @@ export default function DashboardScreen() {
               style={[
                 styles.totalSalesCard,
                 {
-                  backgroundColor: colors.surface,
+                  backgroundColor: isDark ? colors.surfaceElevated : colors.surface,
                   borderColor: colors.border,
                 },
               ]}
@@ -304,9 +307,7 @@ export default function DashboardScreen() {
                   style={[
                     styles.billCountBadge,
                     {
-                      backgroundColor: isDark
-                        ? 'rgba(56, 189, 248, 0.15)'
-                        : 'rgba(30, 41, 59, 0.08)',
+                      backgroundColor: isDark ? colors.primaryAccentSoft : 'rgba(30, 41, 59, 0.08)',
                     },
                   ]}
                 >
@@ -401,19 +402,23 @@ export default function DashboardScreen() {
               style={[
                 styles.expensesCard,
                 {
-                  backgroundColor: isDark ? 'rgba(245, 158, 11, 0.12)' : '#FFFBEB',
-                  borderColor: isDark ? '#78350F' : '#FDE68A',
+                  backgroundColor: isDark ? colors.expenseBackground : '#FFFBEB',
+                  borderColor: isDark ? colors.expense : '#FDE68A',
                 },
               ]}
               onPress={() => router.push('/(app)/expenses' as any)}
             >
               <View style={styles.expensesTopRow}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="wallet-outline" size={18} color={isDark ? '#FBBF24' : '#B45309'} />
+                  <Ionicons
+                    name="wallet-outline"
+                    size={18}
+                    color={isDark ? colors.expense : '#B45309'}
+                  />
                   <AppText
                     variant="captionBold"
                     style={{
-                      color: isDark ? '#FBBF24' : '#B45309',
+                      color: isDark ? colors.expense : '#B45309',
                       fontSize: 13,
                       letterSpacing: 0.5,
                     }}
@@ -421,15 +426,16 @@ export default function DashboardScreen() {
                     {t.dashboard.expenses}
                   </AppText>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={isDark ? '#FBBF24' : '#B45309'} />
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={isDark ? colors.expense : '#B45309'}
+                />
               </View>
               <View style={styles.expensesBottomRow}>
                 <AppText
                   variant="h2"
-                  style={[
-                    styles.expensesAmount,
-                    { color: isDark ? '#FBBF24' : '#92400E' },
-                  ]}
+                  style={[styles.expensesAmount, { color: isDark ? colors.expense : '#92400E' }]}
                 >
                   {formatCurrency(dashboardData?.totalExpensesPaise || 0)}
                 </AppText>
@@ -444,15 +450,12 @@ export default function DashboardScreen() {
               style={[
                 styles.quickActionsCard,
                 {
-                  backgroundColor: colors.surface,
+                  backgroundColor: isDark ? colors.surfaceElevated : colors.surface,
                   borderColor: colors.border,
                 },
               ]}
             >
-              <AppText
-                variant="h4"
-                style={[styles.sectionTitle, { color: colors.textPrimary }]}
-              >
+              <AppText variant="h4" style={[styles.sectionTitle, { color: colors.textPrimary }]}>
                 {t.dashboard.quickActions}
               </AppText>
               <View style={styles.actionButtonsRow}>
@@ -478,7 +481,7 @@ export default function DashboardScreen() {
                   style={[
                     styles.actionBtn,
                     {
-                      backgroundColor: colors.surfaceSubtle,
+                      backgroundColor: isDark ? colors.surfaceElevated : colors.surfaceSubtle,
                       borderColor: colors.border,
                       borderWidth: 1,
                       flex: 1,
@@ -502,7 +505,7 @@ export default function DashboardScreen() {
               style={[
                 styles.recentBillsCard,
                 {
-                  backgroundColor: colors.surface,
+                  backgroundColor: isDark ? colors.surfaceElevated : colors.surface,
                   borderColor: colors.border,
                 },
               ]}
@@ -559,10 +562,7 @@ export default function DashboardScreen() {
                       {/* Row 1: Invoice # + Party Badge (Left) vs Total Amount (Right) */}
                       <View style={styles.invoiceRow1}>
                         <View style={styles.invoiceRow1Left}>
-                          <AppText
-                            variant="bodyLargeBold"
-                            style={{ color: colors.textPrimary }}
-                          >
+                          <AppText variant="bodyLargeBold" style={{ color: colors.textPrimary }}>
                             #{inv.invoice_number}
                           </AppText>
                           <View
@@ -570,7 +570,7 @@ export default function DashboardScreen() {
                               styles.partyTypeBadge,
                               {
                                 backgroundColor: isDark
-                                  ? 'rgba(56, 189, 248, 0.15)'
+                                  ? colors.primaryAccentSoft
                                   : 'rgba(30, 41, 59, 0.08)',
                               },
                             ]}
@@ -586,10 +586,7 @@ export default function DashboardScreen() {
                             </AppText>
                           </View>
                         </View>
-                        <AppText
-                          variant="bodyLargeBold"
-                          style={{ color: colors.textPrimary }}
-                        >
+                        <AppText variant="bodyLargeBold" style={{ color: colors.textPrimary }}>
                           {formatCurrency(Number(inv.total_amount))}
                         </AppText>
                       </View>
@@ -610,9 +607,7 @@ export default function DashboardScreen() {
                               backgroundColor: isPaid
                                 ? colors.jamaBackground
                                 : colors.bakiBackground,
-                              borderColor: isPaid
-                                ? colors.jamaBorder
-                                : colors.bakiBorder,
+                              borderColor: isPaid ? colors.jamaBorder : colors.bakiBorder,
                             },
                           ]}
                         >

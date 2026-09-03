@@ -23,6 +23,7 @@ import {
   AppBadge,
 } from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/theme';
 import { spacing } from '@/src/theme/spacing';
 import { borderRadius } from '@/src/theme/borderRadius';
 import { useBuyers, useCreateBuyer, buyerFormSchema, BuyerSummary } from '@/src/features/buyers';
@@ -32,6 +33,7 @@ import { formatCurrency, formatPhoneDisplay } from '@/src/utils';
 export default function BuyersScreen() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { colors, isDark } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [displayLimit, setDisplayLimit] = useState(20);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -95,16 +97,27 @@ export default function BuyersScreen() {
         activeOpacity={0.7}
         onPress={() => router.push(`/(app)/buyers/${item.id}` as any)}
       >
-        <AppCard style={styles.buyerCard}>
+        <AppCard variant="elevated" style={styles.buyerCard}>
           <View style={styles.cardHeader}>
-            <View style={styles.avatarCircle}>
-              <AppText variant="bodyLargeBold" color={colors.primary}>
+            <View
+              style={[
+                styles.avatarCircle,
+                {
+                  backgroundColor: isDark ? colors.surfaceElevated : colors.surfaceSubtle,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <AppText
+                variant="bodyLargeBold"
+                color={isDark ? colors.accent : colors.primary}
+              >
                 {item.name.slice(0, 2).toUpperCase()}
               </AppText>
             </View>
 
             <View style={styles.buyerInfo}>
-              <AppText variant="bodyLargeBold" numberOfLines={1}>
+              <AppText variant="bodyLargeBold" color={colors.textPrimary} numberOfLines={1}>
                 {item.name}
               </AppText>
               <AppText variant="caption" color={colors.textSecondary} style={styles.phoneText}>
@@ -151,15 +164,17 @@ export default function BuyersScreen() {
       }
     >
       {/* Outstanding Stats Banner */}
-      <AppCard style={styles.summaryBanner}>
+      <AppCard variant="elevated" style={styles.summaryBanner}>
         <View style={styles.summaryCol}>
           <AppText variant="caption" color={colors.textSecondary}>
             {t.buyers.title.toUpperCase()}
           </AppText>
-          <AppText variant="h3">{buyers?.length || 0}</AppText>
+          <AppText variant="h3" color={colors.textPrimary}>
+            {buyers?.length || 0}
+          </AppText>
         </View>
 
-        <View style={styles.summaryDivider} />
+        <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
 
         <View style={styles.summaryCol}>
           <AppText variant="caption" color={colors.textSecondary}>
@@ -171,28 +186,31 @@ export default function BuyersScreen() {
         </View>
       </AppCard>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons
-          name="search-outline"
-          size={20}
-          color={colors.textSecondary}
-          style={styles.searchIcon}
-        />
-        <AppTextInput
-          placeholder={t.buyers.searchPlaceholder}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          containerStyle={styles.searchInputContainer}
-          style={styles.searchInput}
-          autoCapitalize="none"
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearchBtn}>
-            <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
-          </TouchableOpacity>
-        )}
-      </View>
+      {/* Search Bar with Native Icons */}
+      <AppTextInput
+        placeholder={t.buyers.searchPlaceholder}
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        containerStyle={styles.searchContainer}
+        autoCapitalize="none"
+        leftIcon={
+          <Ionicons
+            name="search-outline"
+            size={20}
+            color={colors.textSecondary}
+          />
+        }
+        rightIcon={
+          searchQuery.length > 0 ? (
+            <TouchableOpacity
+              onPress={() => setSearchQuery('')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+          ) : undefined
+        }
+      />
 
       {/* Buyer List / States */}
       {isLoading && !isRefetching ? (
@@ -215,13 +233,17 @@ export default function BuyersScreen() {
         </View>
       ) : buyers && buyers.length === 0 ? (
         <View style={styles.centerState}>
-          <Ionicons name="business-outline" size={56} color={colors.textMuted} />
-          <AppText variant="bodyLargeBold" style={styles.stateTitle}>
+          <Ionicons
+            name="business-outline"
+            size={56}
+            color={isDark ? colors.accent : colors.textMuted}
+          />
+          <AppText variant="bodyLargeBold" color={colors.textPrimary} style={styles.stateTitle}>
             {t.buyers.noBuyers}
           </AppText>
           {!searchQuery && (
             <AppButton
-              title={t.buyers.addBuyer}
+              title={`+ ${t.buyers.addBuyer}`}
               onPress={() => setIsAddModalOpen(true)}
               style={styles.retryBtn}
             />
@@ -264,9 +286,19 @@ export default function BuyersScreen() {
         }}
         statusBarTranslucent
       >
-        <SafeAreaView edges={['top', 'bottom']} style={styles.fullscreenModalContainer}>
-          <View style={styles.fullscreenModalHeader}>
-            <AppText variant="h3">{t.buyers.createBuyerTitle}</AppText>
+        <SafeAreaView
+          edges={['top', 'bottom']}
+          style={[styles.fullscreenModalContainer, { backgroundColor: colors.background }]}
+        >
+          <View
+            style={[
+              styles.fullscreenModalHeader,
+              { backgroundColor: colors.surface, borderBottomColor: colors.border },
+            ]}
+          >
+            <AppText variant="h3" style={{ color: colors.textPrimary }}>
+              {t.buyers.createBuyerTitle}
+            </AppText>
             <TouchableOpacity
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               onPress={() => {
@@ -346,7 +378,6 @@ const styles = StyleSheet.create({
   },
   summaryBanner: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
     padding: spacing.md,
     marginBottom: spacing.md,
     borderRadius: borderRadius.lg,
@@ -357,34 +388,10 @@ const styles = StyleSheet.create({
   },
   summaryDivider: {
     width: 1,
-    backgroundColor: colors.border,
     marginVertical: spacing.xs,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginBottom: spacing.md,
-    position: 'relative',
-  },
-  searchIcon: {
-    position: 'absolute',
-    left: spacing.sm,
-    zIndex: 1,
-  },
-  searchInputContainer: {
-    flex: 1,
-    marginBottom: 0,
-  },
-  searchInput: {
-    paddingLeft: spacing.xl,
-    paddingRight: spacing.xl,
-    backgroundColor: colors.surface,
-  },
-  clearSearchBtn: {
-    position: 'absolute',
-    right: spacing.sm,
-    zIndex: 1,
-    padding: 4,
   },
   listContent: {
     paddingBottom: 160,

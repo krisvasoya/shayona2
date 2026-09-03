@@ -11,6 +11,7 @@ import {
   AppTextInput,
 } from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/theme';
 import { spacing } from '@/src/theme/spacing';
 import { useAuth } from '@/src/features/auth';
 import { useLanguage } from '@/src/localization';
@@ -21,6 +22,7 @@ export default function BusinessProfileScreen() {
   const router = useRouter();
   const { user, profile, setProfile } = useAuth();
   const { t } = useLanguage();
+  const { colors, isDark } = useTheme();
 
   const [shopName, setShopName] = useState('');
   const [phone, setPhone] = useState('');
@@ -108,8 +110,16 @@ export default function BusinessProfileScreen() {
     >
       <AppCard style={styles.card}>
         <View style={styles.avatarHeaderRow}>
-          <View style={styles.profileAvatar}>
-            <Ionicons name="storefront" size={28} color={colors.primary} />
+          <View
+            style={[
+              styles.profileAvatar,
+              {
+                backgroundColor: isDark ? colors.surfaceElevated : colors.surfaceSubtle,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <Ionicons name="storefront" size={28} color={isDark ? colors.accent : colors.primary} />
           </View>
           <View style={{ flex: 1, marginLeft: spacing.md }}>
             <AppText variant="h3">{shopName || 'Shayona Enterprise'}</AppText>
@@ -161,7 +171,11 @@ export default function BusinessProfileScreen() {
 
         <View style={styles.helperRow}>
           <Ionicons name="information-circle-outline" size={15} color={colors.textSecondary} />
-          <AppText variant="caption" color={colors.textSecondary} style={{ flex: 1, marginLeft: 4 }}>
+          <AppText
+            variant="caption"
+            color={colors.textSecondary}
+            style={{ flex: 1, marginLeft: 4 }}
+          >
             {t.businessProfile.addressHelper}
           </AppText>
         </View>

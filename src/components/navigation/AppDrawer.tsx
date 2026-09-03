@@ -131,7 +131,12 @@ export const AppDrawer: React.FC = () => {
           {/* Header */}
           <View style={[styles.header, { backgroundColor: colors.surfaceSubtle }]}>
             <View style={styles.headerTop}>
-              <View style={[styles.logoBadge, { backgroundColor: isDark ? colors.accent : colors.primary }]}>
+              <View
+                style={[
+                  styles.logoBadge,
+                  { backgroundColor: isDark ? colors.accent : colors.primary },
+                ]}
+              >
                 <Ionicons name="receipt" size={24} color="#FFFFFF" />
               </View>
               <TouchableOpacity
@@ -225,7 +230,7 @@ export const AppDrawer: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           {/* Secondary Functions: Settings, Language, Profile */}
           <View style={styles.menuSection}>

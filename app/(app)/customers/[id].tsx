@@ -20,6 +20,7 @@ import {
   AppModal,
 } from '@/src/components/common';
 import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/theme';
 import { spacing } from '@/src/theme/spacing';
 import { borderRadius } from '@/src/theme/borderRadius';
 import {
@@ -33,6 +34,7 @@ import { formatCurrency, formatPhoneDisplay } from '@/src/utils';
 export default function CustomerDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { colors, isDark } = useTheme();
 
   const { data: customer, isLoading, isError, error, refetch } = useCustomerDetails(id as string);
   const updateCustomerMutation = useUpdateCustomer();
@@ -190,11 +192,33 @@ export default function CustomerDetailScreen() {
         </AppText>
 
         <View style={styles.headerActions}>
-          <TouchableOpacity onPress={openEditModal} style={styles.actionIconBtn}>
-            <Ionicons name="create-outline" size={22} color={colors.primary} />
+          <TouchableOpacity
+            onPress={openEditModal}
+            style={[
+              styles.actionIconBtn,
+              {
+                backgroundColor: isDark ? colors.surfaceElevated : colors.surfaceSubtle,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <Ionicons
+              name="create-outline"
+              size={22}
+              color={isDark ? colors.accent : colors.primary}
+            />
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleDeleteCustomer} style={styles.actionIconBtn}>
+          <TouchableOpacity
+            onPress={handleDeleteCustomer}
+            style={[
+              styles.actionIconBtn,
+              {
+                backgroundColor: isDark ? colors.dangerBackground : colors.surfaceSubtle,
+                borderColor: isDark ? colors.danger : colors.border,
+              },
+            ]}
+          >
             <Ionicons name="trash-outline" size={22} color={colors.danger} />
           </TouchableOpacity>
         </View>
@@ -232,9 +256,16 @@ export default function CustomerDetailScreen() {
               <View style={styles.shortcutRow}>
                 <TouchableOpacity
                   onPress={handleCall}
-                  style={[styles.shortcutBtn, { backgroundColor: colors.primaryLight + '20' }]}
+                  style={[
+                    styles.shortcutBtn,
+                    {
+                      backgroundColor: isDark
+                        ? colors.primaryAccentSoft
+                        : colors.primaryLight + '20',
+                    },
+                  ]}
                 >
-                  <Ionicons name="call" size={20} color={colors.primary} />
+                  <Ionicons name="call" size={20} color={isDark ? colors.accent : colors.primary} />
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -270,7 +301,7 @@ export default function CustomerDetailScreen() {
             </View>
           </View>
 
-          <View style={styles.ledgerDivider} />
+          <View style={[styles.ledgerDivider, { backgroundColor: colors.border }]} />
 
           <View style={styles.ledgerGrid}>
             <View style={styles.ledgerItem}>

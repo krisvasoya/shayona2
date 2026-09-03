@@ -190,20 +190,43 @@ export default function SettingsScreen() {
         onPress={() => router.push('/(app)/business-profile' as any)}
       >
         <AppCard>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: spacing.xs,
+            }}
+          >
             <AppText variant="h4" style={styles.cardSectionTitle}>
               {t.settings.businessProfile}
             </AppText>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <AppText variant="caption" color={colors.primary} style={{ marginRight: 2, fontWeight: '600' }}>
+              <AppText
+                variant="caption"
+                color={colors.primary}
+                style={{ marginRight: 2, fontWeight: '600' }}
+              >
                 {t.settings.editBusinessProfile}
               </AppText>
               <Ionicons name="chevron-forward" size={14} color={colors.primary} />
             </View>
           </View>
           <View style={styles.profileRow}>
-            <View style={styles.profileAvatar}>
-              <Ionicons name="storefront" size={24} color={colors.primary} />
+            <View
+              style={[
+                styles.profileAvatar,
+                {
+                  backgroundColor: isDark ? colors.surfaceElevated : colors.surfaceSubtle,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Ionicons
+                name="storefront"
+                size={24}
+                color={isDark ? colors.accent : colors.primary}
+              />
             </View>
             <View style={styles.profileDetails}>
               <AppText variant="bodyLargeBold">{shopName}</AppText>
@@ -217,7 +240,12 @@ export default function SettingsScreen() {
                 </AppText>
               ) : null}
               {profile?.address ? (
-                <AppText variant="caption" color={colors.textMuted} numberOfLines={1} style={{ marginTop: 2 }}>
+                <AppText
+                  variant="caption"
+                  color={colors.textMuted}
+                  numberOfLines={1}
+                  style={{ marginTop: 2 }}
+                >
                   {profile.address}
                 </AppText>
               ) : null}
@@ -229,7 +257,7 @@ export default function SettingsScreen() {
 
       {/* Language Preferences Card with Radio Selection */}
       <AppCard>
-        <AppText variant="h4" style={styles.cardSectionTitle}>
+        <AppText variant="h4" style={[styles.cardSectionTitle, { color: colors.textPrimary }]}>
           {t.settings.languagePreferences}
         </AppText>
 
@@ -238,16 +266,53 @@ export default function SettingsScreen() {
           <TouchableOpacity
             activeOpacity={0.7}
             disabled={savingLang}
-            style={[styles.langChoiceCard, language === 'en' && styles.langChoiceCardSelected]}
+            style={[
+              styles.langChoiceCard,
+              {
+                backgroundColor:
+                  language === 'en'
+                    ? isDark
+                      ? colors.primaryAccentSoft
+                      : '#EEF2FF'
+                    : isDark
+                      ? colors.surfaceElevated
+                      : colors.surfaceSubtle,
+                borderColor:
+                  language === 'en' ? (isDark ? colors.accent : colors.primary) : colors.border,
+              },
+            ]}
             onPress={() => handleLanguageChange('en')}
           >
             <View style={styles.langChoiceLeft}>
-              <View style={[styles.radioCircle, language === 'en' && styles.radioCircleSelected]}>
-                {language === 'en' && <View style={styles.radioInner} />}
+              <View
+                style={[
+                  styles.radioCircle,
+                  {
+                    borderColor:
+                      language === 'en'
+                        ? isDark
+                          ? colors.accent
+                          : colors.primary
+                        : isDark
+                          ? colors.textTertiary
+                          : colors.textMuted,
+                  },
+                ]}
+              >
+                {language === 'en' && (
+                  <View
+                    style={[
+                      styles.radioInner,
+                      { backgroundColor: isDark ? colors.accent : colors.primary },
+                    ]}
+                  />
+                )}
               </View>
               <View style={{ marginLeft: spacing.sm }}>
-                <AppText variant="bodyLargeBold">English</AppText>
-                <AppText variant="caption" color={colors.textSecondary}>
+                <AppText variant="bodyLargeBold" style={{ color: colors.textPrimary }}>
+                  English
+                </AppText>
+                <AppText variant="caption" style={{ color: colors.textSecondary }}>
                   Default App Language
                 </AppText>
               </View>
@@ -259,16 +324,53 @@ export default function SettingsScreen() {
           <TouchableOpacity
             activeOpacity={0.7}
             disabled={savingLang}
-            style={[styles.langChoiceCard, language === 'gu' && styles.langChoiceCardSelected]}
+            style={[
+              styles.langChoiceCard,
+              {
+                backgroundColor:
+                  language === 'gu'
+                    ? isDark
+                      ? colors.primaryAccentSoft
+                      : '#EEF2FF'
+                    : isDark
+                      ? colors.surfaceElevated
+                      : colors.surfaceSubtle,
+                borderColor:
+                  language === 'gu' ? (isDark ? colors.accent : colors.primary) : colors.border,
+              },
+            ]}
             onPress={() => handleLanguageChange('gu')}
           >
             <View style={styles.langChoiceLeft}>
-              <View style={[styles.radioCircle, language === 'gu' && styles.radioCircleSelected]}>
-                {language === 'gu' && <View style={styles.radioInner} />}
+              <View
+                style={[
+                  styles.radioCircle,
+                  {
+                    borderColor:
+                      language === 'gu'
+                        ? isDark
+                          ? colors.accent
+                          : colors.primary
+                        : isDark
+                          ? colors.textTertiary
+                          : colors.textMuted,
+                  },
+                ]}
+              >
+                {language === 'gu' && (
+                  <View
+                    style={[
+                      styles.radioInner,
+                      { backgroundColor: isDark ? colors.accent : colors.primary },
+                    ]}
+                  />
+                )}
               </View>
               <View style={{ marginLeft: spacing.sm }}>
-                <AppText variant="bodyLargeBold">ગુજરાતી (Gujarati)</AppText>
-                <AppText variant="caption" color={colors.textSecondary}>
+                <AppText variant="bodyLargeBold" style={{ color: colors.textPrimary }}>
+                  ગુજરાતી (Gujarati)
+                </AppText>
+                <AppText variant="caption" style={{ color: colors.textSecondary }}>
                   ગુજરાતી ભાષા પસંદ કરો
                 </AppText>
               </View>
@@ -280,10 +382,14 @@ export default function SettingsScreen() {
 
       {/* Appearance / Theme Preferences Card */}
       <AppCard>
-        <AppText variant="h4" style={styles.cardSectionTitle}>
+        <AppText variant="h4" style={[styles.cardSectionTitle, { color: colors.textPrimary }]}>
           {t.settings.appearance}
         </AppText>
-        <AppText variant="caption" color={colors.textSecondary} style={{ marginBottom: spacing.sm }}>
+        <AppText
+          variant="caption"
+          color={colors.textSecondary}
+          style={{ marginBottom: spacing.sm }}
+        >
           {t.settings.appearanceSubtitle}
         </AppText>
 
@@ -294,8 +400,20 @@ export default function SettingsScreen() {
             style={[
               styles.langChoiceCard,
               {
-                backgroundColor: themeMode === 'system' ? (isDark ? 'rgba(56, 189, 248, 0.15)' : '#EEF2FF') : colors.surfaceSubtle,
-                borderColor: themeMode === 'system' ? (isDark ? colors.accent : colors.primary) : colors.border,
+                backgroundColor:
+                  themeMode === 'system'
+                    ? isDark
+                      ? colors.primaryAccentSoft
+                      : '#EEF2FF'
+                    : isDark
+                      ? colors.surfaceElevated
+                      : colors.surfaceSubtle,
+                borderColor:
+                  themeMode === 'system'
+                    ? isDark
+                      ? colors.accent
+                      : colors.primary
+                    : colors.border,
               },
             ]}
             onPress={() => setThemeMode('system')}
@@ -304,7 +422,16 @@ export default function SettingsScreen() {
               <View
                 style={[
                   styles.radioCircle,
-                  themeMode === 'system' && { borderColor: isDark ? colors.accent : colors.primary },
+                  {
+                    borderColor:
+                      themeMode === 'system'
+                        ? isDark
+                          ? colors.accent
+                          : colors.primary
+                        : isDark
+                          ? colors.textTertiary
+                          : colors.textMuted,
+                  },
                 ]}
               >
                 {themeMode === 'system' && (
@@ -317,8 +444,10 @@ export default function SettingsScreen() {
                 )}
               </View>
               <View style={{ marginLeft: spacing.sm }}>
-                <AppText variant="bodyLargeBold">{t.settings.systemOption}</AppText>
-                <AppText variant="caption" color={colors.textSecondary}>
+                <AppText variant="bodyLargeBold" style={{ color: colors.textPrimary }}>
+                  {t.settings.systemOption}
+                </AppText>
+                <AppText variant="caption" style={{ color: colors.textSecondary }}>
                   {t.settings.systemOptionDesc}
                 </AppText>
               </View>
@@ -334,8 +463,16 @@ export default function SettingsScreen() {
             style={[
               styles.langChoiceCard,
               {
-                backgroundColor: themeMode === 'light' ? (isDark ? 'rgba(56, 189, 248, 0.15)' : '#EEF2FF') : colors.surfaceSubtle,
-                borderColor: themeMode === 'light' ? (isDark ? colors.accent : colors.primary) : colors.border,
+                backgroundColor:
+                  themeMode === 'light'
+                    ? isDark
+                      ? colors.primaryAccentSoft
+                      : '#EEF2FF'
+                    : isDark
+                      ? colors.surfaceElevated
+                      : colors.surfaceSubtle,
+                borderColor:
+                  themeMode === 'light' ? (isDark ? colors.accent : colors.primary) : colors.border,
               },
             ]}
             onPress={() => setThemeMode('light')}
@@ -344,7 +481,16 @@ export default function SettingsScreen() {
               <View
                 style={[
                   styles.radioCircle,
-                  themeMode === 'light' && { borderColor: isDark ? colors.accent : colors.primary },
+                  {
+                    borderColor:
+                      themeMode === 'light'
+                        ? isDark
+                          ? colors.accent
+                          : colors.primary
+                        : isDark
+                          ? colors.textTertiary
+                          : colors.textMuted,
+                  },
                 ]}
               >
                 {themeMode === 'light' && (
@@ -357,8 +503,10 @@ export default function SettingsScreen() {
                 )}
               </View>
               <View style={{ marginLeft: spacing.sm }}>
-                <AppText variant="bodyLargeBold">{t.settings.lightOption}</AppText>
-                <AppText variant="caption" color={colors.textSecondary}>
+                <AppText variant="bodyLargeBold" style={{ color: colors.textPrimary }}>
+                  {t.settings.lightOption}
+                </AppText>
+                <AppText variant="caption" style={{ color: colors.textSecondary }}>
                   {t.settings.lightOptionDesc}
                 </AppText>
               </View>
@@ -374,8 +522,16 @@ export default function SettingsScreen() {
             style={[
               styles.langChoiceCard,
               {
-                backgroundColor: themeMode === 'dark' ? (isDark ? 'rgba(56, 189, 248, 0.15)' : '#EEF2FF') : colors.surfaceSubtle,
-                borderColor: themeMode === 'dark' ? (isDark ? colors.accent : colors.primary) : colors.border,
+                backgroundColor:
+                  themeMode === 'dark'
+                    ? isDark
+                      ? colors.primaryAccentSoft
+                      : '#EEF2FF'
+                    : isDark
+                      ? colors.surfaceElevated
+                      : colors.surfaceSubtle,
+                borderColor:
+                  themeMode === 'dark' ? (isDark ? colors.accent : colors.primary) : colors.border,
               },
             ]}
             onPress={() => setThemeMode('dark')}
@@ -384,7 +540,16 @@ export default function SettingsScreen() {
               <View
                 style={[
                   styles.radioCircle,
-                  themeMode === 'dark' && { borderColor: isDark ? colors.accent : colors.primary },
+                  {
+                    borderColor:
+                      themeMode === 'dark'
+                        ? isDark
+                          ? colors.accent
+                          : colors.primary
+                        : isDark
+                          ? colors.textTertiary
+                          : colors.textMuted,
+                  },
                 ]}
               >
                 {themeMode === 'dark' && (
@@ -397,8 +562,10 @@ export default function SettingsScreen() {
                 )}
               </View>
               <View style={{ marginLeft: spacing.sm }}>
-                <AppText variant="bodyLargeBold">{t.settings.darkOption}</AppText>
-                <AppText variant="caption" color={colors.textSecondary}>
+                <AppText variant="bodyLargeBold" style={{ color: colors.textPrimary }}>
+                  {t.settings.darkOption}
+                </AppText>
+                <AppText variant="caption" style={{ color: colors.textSecondary }}>
                   {t.settings.darkOptionDesc}
                 </AppText>
               </View>
@@ -464,7 +631,7 @@ export default function SettingsScreen() {
             loading={exportingBackup}
             disabled={exportingBackup}
             variant="primary"
-            icon={<Ionicons name="cloud-download-outline" size={18} color={colors.surface} />}
+            icon={<Ionicons name="cloud-download-outline" size={18} color="#FFFFFF" />}
           />
 
           <AppButton
@@ -485,13 +652,21 @@ export default function SettingsScreen() {
         <TouchableOpacity
           activeOpacity={0.7}
           style={styles.updateCardRow}
-          onPress={() => router.push('/app-updates')}
+          onPress={() => router.push('/(app)/app-updates' as any)}
           accessibilityRole="button"
           accessibilityLabel={t.updates.title}
         >
           <View style={styles.updateLeft}>
-            <View style={styles.updateIconBox}>
-              <Ionicons name="sparkles" size={20} color={colors.primary} />
+            <View
+              style={[
+                styles.updateIconBox,
+                {
+                  backgroundColor: isDark ? colors.surfaceElevated : colors.surfaceSubtle,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Ionicons name="sparkles" size={20} color={isDark ? colors.accent : colors.primary} />
             </View>
             <View style={{ marginLeft: spacing.sm, flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>

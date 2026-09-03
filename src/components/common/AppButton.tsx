@@ -15,15 +15,7 @@ import { spacing } from '@/src/theme/spacing';
 import { fontSize, fontWeight } from '@/src/theme/typography';
 
 export type ButtonVariant =
-  | 'primary'
-  | 'secondary'
-  | 'accent'
-  | 'outline'
-  | 'ghost'
-  | 'danger'
-  | 'success'
-  | 'jama'
-  | 'baki';
+  'primary' | 'secondary' | 'accent' | 'outline' | 'ghost' | 'danger' | 'success' | 'jama' | 'baki';
 
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
@@ -59,7 +51,7 @@ export const AppButton: React.FC<AppButtonProps> = ({
       case 'secondary':
         return {
           container: {
-            backgroundColor: colors.surfaceSubtle,
+            backgroundColor: isDark ? colors.surfaceElevated : colors.surfaceSubtle,
             borderWidth: 1,
             borderColor: colors.border,
           },
@@ -87,7 +79,7 @@ export const AppButton: React.FC<AppButtonProps> = ({
           container: {
             backgroundColor: 'transparent',
             borderWidth: 1.5,
-            borderColor: colors.borderDark,
+            borderColor: isDark ? colors.border : colors.borderDark,
           },
           text: {
             color: colors.textPrimary,
@@ -165,6 +157,12 @@ export const AppButton: React.FC<AppButtonProps> = ({
   const sizeStyle = size === 'sm' ? styles.sm : size === 'lg' ? styles.lg : undefined;
   const isDisabled = disabled || loading;
 
+  const disabledContainerStyle: ViewStyle = isDark
+    ? { backgroundColor: colors.disabled, borderColor: colors.border }
+    : styles.disabled;
+
+  const disabledTextStyle: TextStyle = isDark ? { color: colors.disabledText } : {};
+
   return (
     <TouchableOpacity
       activeOpacity={0.8}
@@ -174,7 +172,7 @@ export const AppButton: React.FC<AppButtonProps> = ({
         currentVariant.container,
         sizeStyle,
         fullWidth && styles.fullWidth,
-        isDisabled && styles.disabled,
+        isDisabled && disabledContainerStyle,
         style,
       ]}
       accessibilityRole="button"
@@ -191,6 +189,7 @@ export const AppButton: React.FC<AppButtonProps> = ({
               currentVariant.text,
               icon && iconPosition === 'left' ? { marginLeft: 8 } : undefined,
               icon && iconPosition === 'right' ? { marginRight: 8 } : undefined,
+              isDisabled && disabledTextStyle,
               textStyle,
             ]}
           >
